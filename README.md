@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+  <img src="./public/logo-mark.svg" width="72" alt="ulearn" />
+  <h1>ulearn</h1>
+  <p><strong>Learn it once. Explain it forever.</strong></p>
+  <p>An open learning platform where every topic gets its own space.</p>
+</div>
 
-## Getting Started
+---
 
-First, run the development server:
+**ulearn** is a statically generated learning site. Each subject is a *topic*;
+each topic holds a short sequence of *lessons* written in MDX. Adding a topic is
+a folder, a config file and one line in a registry — routes, navigation,
+sitemap, social cards and structured data all follow automatically.
+
+The name is `u` for **U**ttam and `u` for **you**.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # optional for local dev
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Script          | Does                                          |
+| --------------- | --------------------------------------------- |
+| `npm run dev`   | Dev server with Turbopack and hot reload      |
+| `npm run build` | Production build; prerenders every page       |
+| `npm start`     | Serve the production build                    |
+| `npm run lint`  | ESLint                                        |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Set `NEXT_PUBLIC_SITE_URL` before deploying — canonical URLs, the sitemap,
+`robots.txt` and Open Graph image URLs are all built from it. See
+[`.env.example`](./.env.example).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Adding a topic
 
-## Learn More
+Three steps, in full:
 
-To learn more about Next.js, take a look at the following resources:
+```txt
+content/topics/
+└─ your-topic/
+   ├─ index.ts               ← metadata + lesson list
+   └─ lessons/
+      └─ first-lesson.mdx    ← the prose
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```ts
+// content/topics/your-topic/index.ts
+import { defineTopic } from "@/lib/content/types";
+import FirstLesson from "./lessons/first-lesson.mdx";
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+export default defineTopic({
+  slug: "your-topic",
+  title: "Your Topic",
+  tagline: "One line for the card.",
+  description: "A paragraph for the topic page and meta description.",
+  level: "beginner",
+  accent: "sky",
+  icon: "🧠",
+  order: 4,
+  tags: ["something"],
+  lessons: [
+    {
+      slug: "first-lesson",
+      title: "First Lesson",
+      description: "One or two sentences, used for cards and SEO.",
+      minutes: 6,
+      updated: "2026-07-31",
+      Content: FirstLesson,
+    },
+  ],
+});
+```
 
-## Deploy on Vercel
+```ts
+// content/topics/index.ts — register it
+import yourTopic from "./your-topic";
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+export const topics: readonly Topic[] = [/* … */, yourTopic];
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+That's it. `/topics/your-topic` and `/topics/your-topic/first-lesson` now exist,
+are prerendered, are in the sitemap, and have their own generated social card.
+
+Full guide: [`docs/CONTENT-AUTHORING.md`](./docs/CONTENT-AUTHORING.md).
+
+## Documentation
+
+| Document                                              | Covers                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------- |
+| [Architecture](./docs/ARCHITECTURE.md)                 | Directory layout, the content layer, rendering model           |
+| [Content authoring](./docs/CONTENT-AUTHORING.md)       | Writing topics and lessons, MDX conventions, the house style   |
+| [Design system](./docs/DESIGN-SYSTEM.md)               | Tokens, theming, per-topic accents, the logo                   |
+| [SEO](./docs/SEO.md)                                   | Metadata, canonicals, JSON-LD, OG images, launch checklist     |
+| [Deployment](./docs/DEPLOYMENT.md)                     | Environment variables, hosting, post-deploy verification       |
+| [Contributing](./docs/CONTRIBUTING.md)                 | Conventions, commit style, review checklist                    |
+| [Roadmap](./docs/ROADMAP.md)                           | What's deliberately not built yet, and what to build next      |
+
+## Stack
+
+- **[Next.js 16](https://nextjs.org)** — App Router, React Server Components, Turbopack
+- **[React 19](https://react.dev)**
+- **[Tailwind CSS v4](https://tailwindcss.com)** — CSS-first config, no `tailwind.config.js`
+- **[MDX](https://mdxjs.com)** via `@next/mdx` — lesson bodies
+- **TypeScript** in strict mode
+
+Every route is static. There is no database, no API, and no client-side data
+fetching — the whole site is HTML and a small amount of JavaScript.
+
+## Project layout
+
+```txt
+app/                    Routes and metadata files (sitemap, robots, OG images)
+components/             UI, grouped by concern (brand, layout, topics, ui, seo, theme)
+content/topics/         The lessons themselves — MDX plus per-topic config
+lib/
+  content/              Types, registry, queries, route helpers
+  seo/                  Metadata builder, JSON-LD schemas, OG card template
+  utils/                Small shared helpers
+docs/                   The documentation listed above
+```
+
+## Licence
+
+Code is MIT. Lesson content is free to read and share — attribution
+appreciated.

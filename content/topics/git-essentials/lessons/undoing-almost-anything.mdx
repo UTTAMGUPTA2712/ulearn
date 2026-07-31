@@ -1,0 +1,159 @@
+Git almost never loses committed work. What people lose is the *ability to find
+it* — which is a different problem, with a reliable solution.
+
+## First, the panic button
+
+`git reflog` records every position `HEAD` has occupied for the last 90 days:
+every commit, checkout, reset, rebase and merge, whether or not it is reachable
+from any branch.
+
+```bash
+git reflog
+```
+
+```txt
+a1b2c3d HEAD@{0}: reset: moving to HEAD~3
+9f8e7d6 HEAD@{1}: commit: Add lesson search
+4c5b6a7 HEAD@{2}: commit: Extract topic registry
+```
+
+That "deleted" work is right there at `HEAD@{1}`. Recover it:
+
+```bash
+git switch -c recovered 9f8e7d6
+```
+
+If you have committed at any point, you can get back to it. Learn this command
+before you need it.
+
+## Undoing by situation
+
+**Unstaged changes to a file, not yet wanted:**
+
+```bash
+git restore path/to/file      # discard — this one IS unrecoverable
+```
+
+**Staged something by mistake:**
+
+```bash
+git restore --staged path/to/file   # unstage, keep the edits
+```
+
+**Last commit message is wrong:**
+
+```bash
+git commit --amend
+```
+
+**Forgot a file in the last commit:**
+
+```bash
+git add forgotten-file
+git commit --amend --no-edit
+```
+
+**Want the last commit undone but the changes kept:**
+
+```bash
+git reset --soft HEAD~1    # changes stay staged
+git reset HEAD~1           # changes stay in the working tree (default: --mixed)
+```
+
+**Want the last commit and its changes gone:**
+
+```bash
+git reset --hard HEAD~1    # recoverable via reflog, but the working tree is not
+```
+
+**Need to undo a commit that is already pushed:**
+
+```bash
+git revert <hash>
+```
+
+`revert` creates a *new* commit that applies the inverse. It does not rewrite
+history, so it is the only safe option on a shared branch.
+
+## reset vs revert vs restore
+
+This is the distinction worth memorising:
+
+| Command   | Operates on      | Rewrites history | Safe when pushed |
+| --------- | ---------------- | ---------------- | ---------------- |
+| `restore` | files            | no               | yes              |
+| `reset`   | the branch pointer | yes            | no               |
+| `revert`  | adds a new commit | no              | yes              |
+
+`reset` moves the branch backwards and pretends the commits never happened.
+`revert` acknowledges them and adds a correction on top. Public history gets
+`revert`; private history can take `reset`.
+
+## Recovering specific things
+
+**One file from an old commit:**
+
+```bash
+git restore --source=<hash> -- path/to/file
+```
+
+**One commit from another branch:**
+
+```bash
+git cherry-pick <hash>
+```
+
+**A deleted branch** — find it in the reflog and re-point a name at it:
+
+```bash
+git reflog | grep "branch-name"
+git switch -c branch-name <hash>
+```
+
+**A commit that no branch points at**, when the reflog is not enough:
+
+```bash
+git fsck --lost-found
+```
+
+## Finding the commit that broke things
+
+When you know it worked at some point but not when it stopped:
+
+```bash
+git bisect start
+git bisect bad                  # current state is broken
+git bisect good v1.2.0          # this tag was fine
+# Git checks out a midpoint; test it, then:
+git bisect good   # or: git bisect bad
+# repeat — ~10 steps for 1000 commits
+git bisect reset
+```
+
+With a script that exits non-zero on failure, it runs itself:
+
+```bash
+git bisect run npm test
+```
+
+## What is actually unrecoverable
+
+Short list, worth knowing precisely:
+
+- Uncommitted changes destroyed by `git restore`, `git checkout -- .`, or
+  `git reset --hard`
+- Untracked files removed by `git clean -fd`
+- Anything after `git gc --prune=now` has collected unreachable commits
+
+Everything else is a reflog lookup away. The habit that makes this real: commit
+early and often, even if the message is temporary. You can always tidy the
+history later with an interactive rebase — you cannot tidy work you never
+committed.
+
+## What to remember
+
+- `git reflog` first, panic second.
+- `restore` for files, `reset` for private history, `revert` for public history.
+- `--force-with-lease` if a reset is followed by a push.
+- `git bisect run` finds the breaking commit while you do something else.
+- Only uncommitted work is genuinely at risk.

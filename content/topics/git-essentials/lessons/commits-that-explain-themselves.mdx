@@ -1,0 +1,111 @@
+Git history is documentation that never goes stale, because it is written at the
+moment the decision was made. Most teams throw that away by committing
+`fix stuff` forty times.
+
+## What a commit is for
+
+Six months from now, someone will run `git log` on a file and ask: *why is this
+line here?* A good commit answers that. It does not describe the diff — the diff
+is right there.
+
+```txt
+❌ update auth.ts
+❌ fix bug
+❌ changes as per review
+
+✅ Reject expired tokens before hitting the database
+
+   The session lookup ran even for tokens we already knew were stale,
+   adding a query per request on the login path. Checking `exp` first
+   drops p95 auth latency from 40ms to 6ms.
+```
+
+The subject says what changed. The body says **why**, which is the part that
+cannot be recovered from the code.
+
+## The format
+
+```txt
+Short summary in the imperative, under 72 characters
+
+Explain the problem this commit solves. Focus on why, not how —
+the how is visible in the diff. Wrap at 72 columns.
+
+Mention anything surprising: a workaround, a trade-off you took
+knowingly, a constraint that forced the design.
+
+Refs: #142
+```
+
+Two mechanical rules that pay off immediately:
+
+- **Imperative mood**: "Add", not "Added" or "Adds". Git's own generated
+  messages use it ("Merge branch...", "Revert..."), so your history reads
+  consistently.
+- **Blank line after the subject.** Without it, `git log --oneline`, GitHub and
+  every other tool treat your whole message as one long subject.
+
+## One commit, one idea
+
+A commit that renames a variable, fixes a bug and bumps a dependency cannot be
+reverted, cherry-picked or reviewed as a unit. Split it.
+
+The tool for this is staging by patch:
+
+```bash
+git add -p        # step through each hunk: y / n / s to split further
+git commit
+git add -p        # stage the next idea
+git commit
+```
+
+If you have already made a mess locally, fix it before pushing:
+
+```bash
+git commit --amend           # fold changes into the last commit
+git rebase -i HEAD~5         # reorder, squash, split, reword the last 5
+```
+
+Rewriting history is safe while it is only yours. Once it is pushed to a shared
+branch, it is not.
+
+## Conventional Commits
+
+Many teams add a machine-readable prefix so tooling can generate changelogs and
+infer version bumps:
+
+```txt
+feat(auth): add refresh token rotation
+fix(api): handle empty response from /users
+docs: explain the content registry
+refactor(content): extract slug validation
+chore(deps): bump next to 16.2
+```
+
+`feat` implies a minor version bump, `fix` a patch, and `BREAKING CHANGE:` in
+the body a major one. Adopt it if you publish releases; skip it if you do not —
+an unenforced convention is worse than none.
+
+## Reading history well
+
+Once the history is good, these pay it back:
+
+```bash
+git log --oneline --graph --decorate   # shape of the branch structure
+git log -p path/to/file                # every change to one file, with diffs
+git log -S "functionName"              # commits that added or removed a string
+git blame -w path/to/file              # who last touched each line, ignoring whitespace
+git log --since="2 weeks ago" --author="Uttam"
+```
+
+`git log -S` is the underused one. It searches for commits where the *number of
+occurrences* of a string changed — the fastest way to find when something was
+introduced or deleted.
+
+## What to remember
+
+- The subject says what; the body says why.
+- Imperative mood, blank line after the subject, wrap at 72.
+- One idea per commit — use `git add -p` to get there.
+- Clean up locally with `--amend` and interactive rebase, never after pushing.
+- `git log -S` finds when a line was born.

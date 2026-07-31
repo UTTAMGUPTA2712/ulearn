@@ -1,0 +1,138 @@
+A closure is a function that remembers the variables where it was **defined**,
+even after that place has finished executing. That is the entire definition.
+Everything else is a consequence of it.
+
+## The simplest possible example
+
+```js
+function makeCounter() {
+  let count = 0;
+
+  return function increment() {
+    count += 1;
+    return count;
+  };
+}
+
+const next = makeCounter();
+next(); // 1
+next(); // 2
+next(); // 3
+```
+
+`makeCounter` returned long ago. Its stack frame is gone. Yet `count` is still
+alive, because `increment` holds a reference to the scope it was created in, and
+JavaScript will not collect a scope that something still points at.
+
+Note what this gives you for free: `count` is genuinely private. There is no way
+to reach it from outside except through `increment`.
+
+## Each call makes a new scope
+
+This trips people up constantly:
+
+```js
+const a = makeCounter();
+const b = makeCounter();
+
+a(); // 1
+a(); // 2
+b(); // 1  ← not 3
+```
+
+`a` and `b` closed over *different* `count` variables, because each call to
+`makeCounter` created a new scope. Closures capture scopes, not values, and not
+some global slot named `count`.
+
+## Closures capture variables, not snapshots
+
+The classic interview question:
+
+```js
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0);
+}
+// 3, 3, 3
+```
+
+There is one `i`, because `var` is function-scoped. All three callbacks closed
+over the same variable, and by the time they ran, the loop had finished and `i`
+was `3`.
+
+Change one word:
+
+```js
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0);
+}
+// 0, 1, 2
+```
+
+`let` is block-scoped, and the loop creates a fresh binding per iteration. Three
+separate variables, three separate closures.
+
+If you are stuck with `var`, the pre-`let` fix was to create a scope by hand:
+
+```js
+for (var i = 0; i < 3; i++) {
+  (function (captured) {
+    setTimeout(() => console.log(captured), 0);
+  })(i);
+}
+```
+
+That immediately-invoked function is doing exactly what `let` now does for you.
+
+## Where you already use closures
+
+You use them constantly, usually without naming them:
+
+```js
+// Event handlers close over component state
+button.addEventListener("click", () => console.log(userId));
+
+// Callbacks close over the surrounding function's arguments
+items.filter((item) => item.price < maxPrice);
+
+// Module-style private state
+const store = (() => {
+  const cache = new Map();
+  return {
+    get: (key) => cache.get(key),
+    set: (key, value) => cache.set(key, value),
+  };
+})();
+```
+
+Every React hook is built on this. `useState` returns a setter that closes over
+which piece of state it owns; a stale-closure bug in `useEffect` is just this
+lesson showing up with a deadline.
+
+## The one real hazard: stale closures
+
+Because a closure captures the variable *as it was scoped*, a function created
+in an old render sees old values:
+
+```js
+useEffect(() => {
+  const id = setInterval(() => {
+    setCount(count + 1); // always sees the `count` from this render
+  }, 1000);
+  return () => clearInterval(id);
+}, []); // empty deps — the effect never re-runs, so `count` never updates
+```
+
+The fix is to not read the captured value at all:
+
+```js
+setCount((current) => current + 1);
+```
+
+## What to remember
+
+- A closure is a function plus the scope it was defined in.
+- Each call to the outer function creates a new, independent scope.
+- Closures capture *variables*, so later changes are visible — that's the source
+  of both `var` loop bugs and React stale-closure bugs.
+- Reach for the functional-update form whenever a callback needs the current
+  value rather than the captured one.

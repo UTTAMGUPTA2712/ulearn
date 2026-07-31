@@ -1,0 +1,122 @@
+A Git branch is a movable pointer to a commit. It is 41 bytes on disk. Once you
+believe that, branching stops feeling risky and starts feeling free.
+
+## What a branch really is
+
+Commits form a graph; each one points at its parent. A branch name points at one
+commit, and moves forward when you commit. `HEAD` points at the branch you are
+on.
+
+```txt
+main     A ── B ── C
+                    ↖ feature   D ── E
+```
+
+Creating a branch writes one file containing one hash. Deleting it removes that
+file — the commits themselves are untouched until Git's garbage collector runs,
+weeks later.
+
+```bash
+git switch -c feature/lesson-search   # create and switch
+git switch main                       # go back
+git branch -d feature/lesson-search   # delete (refuses if unmerged)
+```
+
+`git switch` and `git restore` replaced the overloaded `git checkout`, which did
+both jobs and caused a lot of accidental file loss. Use them.
+
+## Merge or rebase
+
+Both integrate `main` into your branch. They differ in what history you end up
+with.
+
+**Merge** creates a commit with two parents. History is truthful — it shows that
+work happened in parallel — but a busy repo accumulates merge commits.
+
+```bash
+git switch feature
+git merge main
+```
+
+**Rebase** replays your commits on top of `main`, one at a time, as if you had
+started from today. History is a straight line and easy to read, but the commits
+are *new commits with new hashes*.
+
+```bash
+git switch feature
+git rebase main
+```
+
+The rule that keeps teams sane:
+
+> Rebase your own unpushed work. Merge anything others might have pulled.
+
+Rebasing a shared branch rewrites commits other people already have, and their
+next pull produces a duplicated, tangled history.
+
+## Keeping up to date, safely
+
+```bash
+git fetch origin              # update remote refs; touch nothing local
+git rebase origin/main        # replay your work on the latest main
+```
+
+`git fetch` is always safe — it only downloads. `git pull` is `fetch` plus a
+merge you did not explicitly ask for. Configure it to rebase instead:
+
+```bash
+git config --global pull.rebase true
+```
+
+## When a rebase hits a conflict
+
+A rebase stops at the first conflicting commit. Resolve, stage, continue:
+
+```bash
+# fix the conflict markers in the files Git lists
+git add <resolved-files>
+git rebase --continue
+```
+
+If it goes badly, `git rebase --abort` puts everything back exactly as it was.
+There is no state you can get stuck in.
+
+## Force-pushing safely
+
+After rebasing a branch you have already pushed, a normal push is rejected —
+correctly, since you rewrote history. The safe override is:
+
+```bash
+git push --force-with-lease
+```
+
+This refuses to push if someone else has added commits since your last fetch.
+Plain `--force` overwrites their work without asking. There is no reason to
+type `--force` again.
+
+## Stashing and worktrees
+
+For a quick context switch:
+
+```bash
+git stash push -m "half-finished search UI"
+git stash list
+git stash pop
+```
+
+For a long one, a second working directory beats stashing:
+
+```bash
+git worktree add ../ulearn-hotfix main
+```
+
+You now have the same repository checked out twice, on two branches, with no
+stashing and no rebuilding `node_modules` in the branch you were already using.
+
+## What to remember
+
+- A branch is a pointer; creating and deleting them is nearly free.
+- `git switch` for branches, `git restore` for files.
+- Rebase private work, merge shared work.
+- `--force-with-lease`, never `--force`.
+- `git rebase --abort` always gets you back — nothing is unrecoverable.

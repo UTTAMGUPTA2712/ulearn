@@ -1,0 +1,129 @@
+In the App Router, your folder structure *is* your routing table. There is no
+route config file to keep in sync — which is a relief once you know which
+filenames are special.
+
+## Folders make routes, files make UI
+
+A folder adds a URL segment. It becomes publicly reachable only when it contains
+a `page.tsx`:
+
+```txt
+app/
+├─ page.tsx                    → /
+├─ about/
+│  └─ page.tsx                 → /about
+└─ topics/
+   ├─ page.tsx                 → /topics
+   └─ [topic]/
+      ├─ page.tsx              → /topics/javascript-foundations
+      └─ [lesson]/
+         └─ page.tsx           → /topics/javascript-foundations/closures
+```
+
+A folder without a `page.tsx` is just organisation — you can safely colocate
+components, tests and helpers inside `app/` without creating routes.
+
+## The special files
+
+| File            | What it does                                            |
+| --------------- | ------------------------------------------------------- |
+| `page.tsx`      | Makes the segment routable                              |
+| `layout.tsx`    | Shared shell; preserves state across navigation         |
+| `loading.tsx`   | Instant fallback while the segment streams              |
+| `error.tsx`     | Error boundary for the segment (must be a Client Component) |
+| `not-found.tsx` | Rendered by `notFound()` and for unmatched routes        |
+| `route.ts`      | An API endpoint instead of a page                        |
+
+Layouts nest automatically. `app/layout.tsx` wraps `app/topics/layout.tsx`,
+which wraps `app/topics/[topic]/page.tsx`. A layout does **not** re-render when
+you navigate between its children — that is what makes a sidebar keep its scroll
+position for free.
+
+## Dynamic segments
+
+Square brackets create a parameter. In Next 16, `params` is a **Promise** and
+must be awaited — the synchronous access that Next 15 still tolerated is gone:
+
+```tsx
+// app/topics/[topic]/page.tsx
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ topic: string }>;
+}) {
+  const { topic } = await params;
+  return <h1>{topic}</h1>;
+}
+```
+
+There is also a generated helper type that infers the params from the route
+path, so you never hand-write the shape:
+
+```tsx
+export default async function Page(props: PageProps<"/topics/[topic]">) {
+  const { topic } = await props.params;
+  return <h1>{topic}</h1>;
+}
+```
+
+`PageProps` and `LayoutProps` are global — no import needed. They are generated
+by `next dev`, `next build` or `next typegen`.
+
+Two variants are worth knowing: `[...slug]` matches one or more segments, and
+`[[...slug]]` matches zero or more.
+
+## Prerendering dynamic routes
+
+Export `generateStaticParams` to build every known page at build time:
+
+```tsx
+export function generateStaticParams() {
+  return getTopics().map((topic) => ({ topic: topic.slug }));
+}
+```
+
+Combine it with `export const dynamicParams = false` to return a 404 for
+anything not in that list — useful when your content set is fully known, as it
+is for a docs or learning site.
+
+## Route groups and private folders
+
+Wrap a folder name in parentheses to organise without affecting the URL:
+
+```txt
+app/
+├─ (marketing)/
+│  ├─ layout.tsx    ← applies to about + pricing only
+│  ├─ about/page.tsx    → /about
+│  └─ pricing/page.tsx  → /pricing
+└─ (app)/
+   └─ dashboard/page.tsx → /dashboard
+```
+
+This is the idiomatic way to give two sections different layouts without
+nesting them under a shared URL prefix.
+
+Prefix a folder with an underscore (`_components`) to opt it out of routing
+entirely, regardless of what is inside it.
+
+## Navigating
+
+Use `<Link>` rather than `<a>`. It prefetches the route when the link enters the
+viewport and swaps the page client-side, keeping layout state:
+
+```tsx
+import Link from "next/link";
+
+<Link href={`/topics/${topic.slug}`}>{topic.title}</Link>
+```
+
+For navigation from an event handler, use `useRouter` from `next/navigation` —
+not `next/router`, which is the Pages Router version.
+
+## What to remember
+
+- Folders create segments; `page.tsx` makes them reachable.
+- Layouts nest and persist; that persistence is a feature, not a cache bug.
+- `params` and `searchParams` are Promises — always `await` them.
+- `generateStaticParams` turns dynamic routes into static pages.
+- `(group)` hides a folder from the URL; `_folder` hides it from routing.
