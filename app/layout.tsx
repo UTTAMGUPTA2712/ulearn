@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { TopNav } from "@/components/layout/top-nav";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ulearn",
-  description: "",
+  title: "ulearn/systems",
+  description: "Interactive system architecture demonstrations.",
 };
 
 export default function RootLayout({
@@ -24,8 +26,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
+      <body className="flex min-h-full flex-col">
+        <TopNav />
+        <main className="flex-1">{children}</main>
+      </body>
     </html>
   );
 }
