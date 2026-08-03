@@ -20,19 +20,26 @@ const FAULTS: { value: Fault; label: string }[] = [
 function Button({
   active,
   danger,
+  primary,
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; danger?: boolean }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  active?: boolean;
+  danger?: boolean;
+  primary?: boolean;
+}) {
   return (
     <button
       type="button"
       className={cn(
-        "rounded border px-2.5 py-1 font-mono text-[11px] transition-colors",
-        active
-          ? danger
-            ? "border-status-down bg-status-down/15 text-status-down"
-            : "border-accent bg-accent/15 text-accent"
-          : "border-border text-text-muted hover:border-border-strong hover:text-text",
+        "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all",
+        primary
+          ? "border-accent bg-accent text-accent-foreground hover:opacity-90"
+          : active
+            ? danger
+              ? "border-status-down bg-status-down/15 text-status-down"
+              : "border-accent bg-accent/15 text-accent"
+            : "border-border text-text-muted hover:border-border-strong hover:text-text",
         className,
       )}
       {...props}
@@ -49,7 +56,7 @@ export function AlgorithmSwitch({
 }) {
   return (
     <div>
-      <p className="font-mono text-[11px] tracking-wide text-text-faint uppercase">Algorithm</p>
+      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Algorithm</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {ALGORITHMS.map((a) => (
           <Button key={a.value} active={algorithm === a.value} onClick={() => onChange(a.value)}>
@@ -78,14 +85,14 @@ export function TrafficControls({
 }) {
   return (
     <div>
-      <p className="font-mono text-[11px] tracking-wide text-text-faint uppercase">Traffic</p>
+      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Traffic</p>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <Button onClick={onSendOne}>Send one request</Button>
+        <Button primary onClick={onSendOne}>Send one request</Button>
         <Button active={autoStream} onClick={() => onSetAutoStream(!autoStream)}>
           {autoStream ? "Stop auto-stream" : "Start auto-stream"}
         </Button>
         {autoStream && (
-          <label className="flex items-center gap-1.5 font-mono text-[11px] text-text-muted">
+          <label className="flex items-center gap-1.5 text-sm text-text-muted">
             rate
             <input
               type="range"
@@ -95,7 +102,7 @@ export function TrafficControls({
               onChange={(e) => onSetAutoStream(true, Number(e.target.value))}
               className="accent-accent"
             />
-            {autoStreamRate}/s
+            <span className="font-mono">{autoStreamRate}/s</span>
           </label>
         )}
         <Button danger active={ddosActive} onClick={() => onSetDdos(!ddosActive)} className="ml-auto">
@@ -121,19 +128,19 @@ export function BackendControls({
 }) {
   return (
     <div>
-      <p className="font-mono text-[11px] tracking-wide text-text-faint uppercase">Backends</p>
+      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Backends</p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         {backends.map((backend) => (
-          <div key={backend.id} className="rounded border border-border bg-panel p-3">
+          <div key={backend.id} className="rounded-xl border border-border bg-panel p-3">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-medium text-text">{backend.label}</span>
+              <span className="text-sm font-medium text-text">{backend.label}</span>
               <Button danger={backend.healthy} active={!backend.healthy} onClick={() => onToggleHealthy(backend.id)}>
                 {backend.healthy ? "Kill" : "Revive"}
               </Button>
             </div>
 
             {algorithm === "weighted" && (
-              <label className="mt-2 flex items-center gap-2 font-mono text-[11px] text-text-muted">
+              <label className="mt-2 flex items-center gap-2 text-[11px] text-text-muted">
                 weight
                 <input
                   type="range"
@@ -141,10 +148,10 @@ export function BackendControls({
                   max={10}
                   value={backend.weight}
                   onChange={(e) => onSetWeight(backend.id, Number(e.target.value))}
-                  className="flex-1 accent-accent"
+                  className="min-w-0 flex-1 accent-accent"
                   disabled={!backend.healthy}
                 />
-                {backend.weight}
+                <span className="font-mono">{backend.weight}</span>
               </label>
             )}
 

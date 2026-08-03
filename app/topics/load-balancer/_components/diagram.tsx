@@ -117,7 +117,7 @@ export function LoadBalancerDiagram({
           x={CLIENT.x}
           y={CLIENT.y + 40}
           textAnchor="middle"
-          className="fill-text-muted font-mono"
+          className="fill-text-muted"
           fontSize={11}
         >
           clients
@@ -131,12 +131,12 @@ export function LoadBalancerDiagram({
           y={LB.y - 32}
           width={96}
           height={64}
-          rx={10}
+          rx={14}
           fill="var(--panel-raised)"
           stroke="var(--accent)"
           strokeWidth={1.5}
         />
-        <text x={LB.x} y={LB.y - 4} textAnchor="middle" className="fill-text font-mono" fontSize={13} fontWeight={600}>
+        <text x={LB.x} y={LB.y - 4} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
           LB
         </text>
         <text x={LB.x} y={LB.y + 16} textAnchor="middle" className="fill-accent font-mono" fontSize={9}>
@@ -161,13 +161,13 @@ export function LoadBalancerDiagram({
               y={pos.y - 30}
               width={156}
               height={60}
-              rx={8}
+              rx={12}
               fill="var(--panel-raised)"
               stroke={statusColor}
               strokeWidth={1.5}
             />
             <circle cx={pos.x - 66} cy={pos.y - 18} r={4} fill={statusColor} />
-            <text x={pos.x - 56} y={pos.y - 14} className="fill-text font-mono" fontSize={12} fontWeight={600}>
+            <text x={pos.x - 56} y={pos.y - 14} className="fill-text" fontSize={12} fontWeight={600}>
               {backend.label}
             </text>
             <text x={pos.x - 66} y={pos.y + 4} className="fill-text-muted font-mono" fontSize={10}>

@@ -8,11 +8,11 @@ const LEVEL_COLOR: Record<LogEntry["level"], string> = {
   error: "text-status-down",
 };
 
-export function EventLog({ entries }: { entries: LogEntry[] }) {
+export function EventLog({ entries, className }: { entries: LogEntry[]; className?: string }) {
   return (
-    <div>
-      <p className="font-mono text-[11px] tracking-wide text-text-faint uppercase">Event log</p>
-      <div className="mt-2 h-48 overflow-y-auto rounded border border-border bg-panel p-2 font-mono text-[11px] leading-relaxed">
+    <div className={className}>
+      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Event log</p>
+      <div className="mt-2 h-48 flex-1 overflow-y-auto rounded-xl border border-border bg-panel p-3 font-mono text-[11px] leading-relaxed">
         {entries.length === 0 && <p className="text-text-faint">Waiting for traffic…</p>}
         {[...entries].reverse().map((entry) => (
           <p key={entry.id} className={cn("truncate", LEVEL_COLOR[entry.level])}>

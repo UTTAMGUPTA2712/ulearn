@@ -5,13 +5,13 @@ import { Container } from "@/components/layout/container";
 import { TopicTabs } from "./_components/topic-tabs";
 
 export const metadata: Metadata = {
-  title: "Load Balancer · ulearn/systems",
+  title: "Load Balancer",
 };
 
 export default function LoadBalancerLayout({ children }: { children: React.ReactNode }) {
   return (
     <Container className="py-10">
-      <p className="font-mono text-xs text-text-faint">topics / traffic-routing</p>
+      <p className="text-xs font-medium text-text-faint">topics / traffic-routing</p>
       <h1 className="mt-1 text-xl font-semibold tracking-tight text-text">Load Balancer</h1>
       <p className="mt-1 max-w-2xl text-sm text-text-muted">
         Round robin, least connections, weighted and IP-hash routing across a pool of

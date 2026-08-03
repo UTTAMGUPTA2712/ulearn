@@ -14,7 +14,7 @@ export function LoadBalancerSimulation() {
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="flex flex-col gap-4">
         <StatsBar stats={snapshot.stats} />
-        <div className="h-[420px] rounded-lg border border-border bg-panel">
+        <div className="h-[420px] shrink-0 rounded-2xl border border-border bg-panel shadow-sm">
           <LoadBalancerDiagram
             algorithm={snapshot.algorithm}
             backends={snapshot.backends}
@@ -22,7 +22,7 @@ export function LoadBalancerSimulation() {
             now={snapshot.now}
           />
         </div>
-        <EventLog entries={snapshot.log} />
+        <EventLog className="flex flex-1 flex-col" entries={snapshot.log} />
       </div>
 
       <div className="flex flex-col gap-6">

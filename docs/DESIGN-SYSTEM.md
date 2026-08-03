@@ -2,9 +2,9 @@
 
 This document is the design contract for ulearn. It exists so that every
 screen, component and line of copy we add reads like it came from the same
-hand — and so that hand looks like it belongs to a senior engineer building a
-tool for other senior engineers, not a marketing team building a SaaS landing
-page.
+hand — and so that hand looks like it belongs to someone who genuinely wants
+you to understand a hard topic, not someone showing off how technical they
+can look.
 
 Read this before styling anything. If a change isn't traceable back to a
 principle here, it's a signal the system needs updating — not an excuse to
@@ -15,29 +15,31 @@ freelance.
 ## 1. Who this is for, and why that dictates the design
 
 ulearn teaches systems-design topics — load balancing, circuit breakers,
-consistent hashing, message queues — to people who already know how to code
-and are past the tutorial stage. The audience is a senior or staff engineer
-prepping for a system-design interview, or a mid-level engineer trying to
-close the gap to senior. They've used Grafana, Datadog, a terminal, a
-Kubernetes dashboard. They're not impressed by decoration; they're impressed
-by precision.
+consistent hashing, message queues — to people who want to actually
+understand how the systems they use every day work. Some are students,
+some are engineers prepping for an interview, some are just curious. They
+don't all live in a terminal, and they shouldn't have to feel like they do
+to use this site.
 
 That audience and that content type is the entire design brief:
 
-- **This is an instrument, not a brochure.** Every page's job is to make a
-  running system legible — traffic flowing, backends failing, a hash ring
-  rebalancing. The chrome exists to disappear in favor of the diagram.
-- **Credibility comes from restraint, not polish-for-polish's-sake.** A
-  senior engineer trusts a page that looks like `htop` or a Grafana panel
-  more than one that looks like a startup's Series A landing page. Confidence
-  is signaled by *not* trying to sell anything.
-- **The reader is here to build a correct mental model.** Typography and
-  layout should support close reading and comparison (tables, side-by-side
-  states, before/after), not skimming.
+- **This is a friendly, approachable learning product, built on real
+  running simulations.** Every page's job is to make a system's behavior
+  easy to see and easy to play with — traffic flowing, backends failing, a
+  hash ring rebalancing — presented in a way that invites you in rather
+  than gatekeeping.
+- **Credibility comes from clarity, not jargon.** A reader trusts a page
+  that explains things simply and lets them experiment more than one that
+  performs technical severity at them.
+- **The reader is here to build a correct mental model, comfortably.**
+  Typography and layout should support close reading and comparison
+  (cards, side-by-side states, before/after), with enough warmth and
+  breathing room that it doesn't feel like homework.
 
-If a proposed change would look at home on a consumer ed-tech marketing site
-(Coursera, Udemy, a "Learn X in 30 Days" course-selling page), it's wrong for
-this product, no matter how attractive it looks in isolation.
+If a proposed change would look at home only in a Kubernetes dashboard or a
+terminal emulator and nowhere else, it's probably too austere for this
+product — we want the polish and warmth of a well-made modern app, applied
+to genuinely technical content.
 
 ---
 
@@ -46,32 +48,30 @@ this product, no matter how attractive it looks in isolation.
 Name the anti-pattern so it's easy to catch in review. **None of the
 following belong in ulearn:**
 
-- Purple-to-pink (or blue-to-purple) gradient hero backgrounds, gradient
-  text, or gradient buttons.
-- Glassmorphism — frosted, semi-transparent panels with blurred backdrops
-  used decoratively rather than functionally.
-- Floating blobs, mesh gradients, or abstract 3D illustrated shapes used as
-  hero-section filler.
-- Oversized rounded corners on everything (`rounded-3xl` soup) — softness
-  used as the *only* visual idea.
-- Generic stock "diverse people looking at laptops" photography, or AI-image
-  illustrations of robots/brains/lightbulbs.
-- Emoji used as primary iconography in headings or nav (a topic's own emoji
-  in a data field is fine — see §8 — plastering 🚀✨💡 through prose is not).
+- Fake, decorative terminal sessions as the primary interface metaphor —
+  command-line flourishes are fine as a rare accent (see §9), never the
+  whole page's framing.
+- Monospace type used everywhere by default. Monospace is for actual code,
+  data values and log lines only (see §5) — headings, nav, labels and body
+  copy are sans.
+- Content-free decoration: floating blobs, mesh gradients, or abstract 3D
+  illustrated shapes used as hero-section filler with nothing behind them.
+- Generic stock "diverse people looking at laptops" photography, or
+  AI-image illustrations of robots/brains/lightbulbs standing in for real
+  product content.
 - Centered, oversized "Welcome to the Future of Learning™" hero copy with a
-  single vague CTA button.
-- Card grids where every card has an icon-in-a-colored-circle, a bold title,
-  and three lines of marketing copy — the "SaaS feature grid" template.
-- Light, airy, low-contrast pastel palettes designed to look "friendly."
-- Sans-serif-everywhere with no monospace — losing the technical register
-  that signals "built by and for engineers."
-- Skeuomorphic drop shadows, glossy buttons, or heavy elevation — this is a
-  flat, dark instrument panel, not a physical object.
+  single vague CTA button and nothing to back it up.
+- Skeuomorphic drop shadows, glossy buttons, or gradients as decoration
+  divorced from any real UI state (this is different from the intentional
+  brand-mark gradient in §8, which is a fixed, deliberate identity element,
+  not a decorative treatment applied ad hoc elsewhere).
+- Hype copy: "unlock," "supercharge," "revolutionize," "game-changing," "in
+  just minutes" (see §9's voice rules — friendly is not the same as
+  hypey).
 
-If you catch yourself reaching for any of these because "that's what modern
-sites look like," stop — that's precisely the register we're avoiding.
-Modern AI-generated UI defaults to decoration because it has no content to
-be honest about. We have content. Be honest about it instead.
+If you catch yourself reaching for terminal cosplay because "that's what a
+serious dev tool looks like," stop — the content is technical enough to
+carry itself; the chrome around it gets to be warm and easy to use.
 
 ---
 
@@ -86,58 +86,56 @@ be honest about. We have content. Be honest about it instead.
    A component that only "works" in one theme is a bug, not a variant.
 2. **The diagram is the hero, not a screenshot of one.** Simulations,
    traffic graphs and state machines are real, running UI — never a static
-   image standing in for the product.
-3. **Monospace is a signal, not a default.** Use it for anything that is
-   *data*: numbers, statuses, identifiers, code, commands, timestamps,
-   labels on charts. Use the sans body font for anything that is *prose*:
-   explanations, lesson text, descriptions. Mixing the two deliberately is
-   what makes the UI read as technical rather than decorative.
-3. **Terminal-adjacent, not terminal-cosplay.** Command-line motifs (`$
-   ulearn --list-topics`) are a seasoning, used at entry points to set tone.
-   They are not the whole meal — we don't fake an entire fictional CLI
-   session on every page.
-4. **One accent color, used sparingly.** A blue (`--accent`) marks
-   interactivity and the single most important number on a screen. If
-   everything is accented, nothing is. This is the brand's one hue outside
-   the neutral canvas — no reds (outside `status-down`), purples or greens
-   anywhere in chrome, buttons, links or highlights.
+   image standing in for the product. This is the one thing we keep,
+   unchanged, from a more austere earlier version of this system: the
+   friendliness is in the chrome around the simulation, not a reason to
+   fake the simulation itself.
+3. **Sans is the voice, monospace is a citation.** Use the sans body font
+   for everything that is prose, UI labels, headings and navigation. Use
+   monospace *only* for things that are literally data or code: numbers,
+   log lines, identifiers, inline commands. Mixing them the other way
+   round — mono headings, mono nav — is what makes a page read as
+   unapproachable; don't do it.
+4. **One accent color, used generously but not everywhere.** A blue
+   (`--accent`) marks interactivity, primary actions and the single most
+   important number on a screen. Primary actions get a filled accent
+   button; everything else stays outlined or plain so the accent still
+   reads as "the important thing," not wallpaper.
 5. **Status color means one thing, everywhere — and `--accent` is not a
    status color.** Green/amber/red/blue map to healthy/warning/down/in-flight
    in every simulation, every table, every badge, with no exceptions and no
-   reuse for unrelated meanings. `status-up` stays green: it is the one
-   deliberate exception to rule 4's "no green," because "healthy = green" is
-   a convention practitioners read faster than they read a legend, and
-   inventing a replacement would cost clarity for no real gain. Everywhere
-   else — brand, links, buttons, emphasis — green does not appear.
-   `--accent` (brand blue) and `status-active` (in-flight blue) are
-   deliberately *different* blues (see §4) so "click this" and "this is
-   currently processing" never look like the same signal.
-6. **Density over whitespace-for-its-own-sake.** Dashboards for practitioners
-   are allowed to be dense — see §10. Generous whitespace is for prose
-   reading columns, not for control panels.
-7. **Motion explains state changes, not the brand.** Animation exists to
-   show a request moving from client to backend, a circuit breaker flipping
-   state, a ring rebalancing. It never exists as a decorative flourish on
-   scroll.
+   reuse for unrelated meanings. `status-up` stays green — "healthy =
+   green" is a convention people read faster than a legend. `--accent`
+   (brand blue) and `status-active` (in-flight blue) are deliberately
+   *different* blues (see §4) so "click this" and "this is currently
+   processing" never look like the same signal.
+6. **Comfortable density.** Give content room to breathe — generous
+   padding on cards, clear spacing between sections — while simulations and
+   control panels are still allowed to be a little denser where the
+   information genuinely benefits (see §10). Default to more whitespace,
+   not less; density is the exception, not the rule.
+7. **Motion explains state changes and adds a little life.** Animation
+   exists to show a request moving from client to backend, a circuit
+   breaker flipping state, a ring rebalancing — and small, tasteful hover
+   and transition polish on buttons/cards is welcome too, as long as it
+   stays quick and purposeful rather than showy.
 
 ---
 
 ## 4. Color
 
-The palette is deliberately narrow: a near-neutral canvas, two panel
-elevations, one brand accent (blue), and four status colors reused
-everywhere. Both themes share the same *structure* — the same token names,
-the same relationships between them — and differ only in value. Implement
-both sets as CSS custom properties in `app/globals.css`, switched by a
-`data-theme` attribute on `<html>` (see §7); treat the tables below as
-their spec.
+The palette is a near-neutral warm canvas, two panel elevations, one brand
+accent (blue), and four status colors reused everywhere. Both themes share
+the same *structure* — the same token names, the same relationships between
+them — and differ only in value. Implement both sets as CSS custom
+properties in `app/globals.css`, switched by a `data-theme` attribute on
+`<html>` (see §7); treat the tables below as their spec.
 
 The neutrals in both themes carry a faint warm cast — a "skin tint" rather
-than a clinical, blue-tinted gray — so they sit as a considered neutral
-canvas rather than a cold, generic dashboard gray. It should read as warm
-and considered, not pink: keep the tint subtle enough that `--bg` and
-`--panel` still read as "black" / "off-white" at a glance, and don't let it
-fight the blue accent.
+than a clinical, blue-tinted gray — so the whole canvas feels human and
+considered rather than a cold, generic dashboard gray. It should read as
+warm and considered, not pink: keep the tint subtle enough that `--bg` and
+`--panel` still read as "near-black" / "off-white" at a glance.
 
 ### Dark theme (default when the OS prefers dark)
 
@@ -150,9 +148,10 @@ fight the blue accent.
 | `--border-strong`  | `#40312c` | Hover / focus-adjacent border, emphasis dividers                 |
 | `--text`           | `#eee6e3` | Primary text                                                     |
 | `--text-muted`     | `#a3928c` | Secondary text, descriptions, body copy inside cards              |
-| `--text-faint`     | `#6d5c56` | Tertiary — labels, timestamps, disabled state                    |
+| `--text-faint`     | `#8f7c74` | Tertiary — labels, timestamps, disabled state                    |
 | `--accent`         | `#4c8dfb` | Interactive elements, the one number that matters, active state  |
 | `--accent-dim`     | `#1d3a66` | Accent at rest / secondary accent use                            |
+| `--accent-foreground` | `#0e0b0a` | Text/icon color *on top of* a filled `--accent` surface (a filled pill/button) — dark theme's accent is light enough that white text fails AA, so this is near-black instead |
 | `--status-up`      | `#34d399` | Healthy, success, passing (the one sanctioned green — see §3.5)  |
 | `--status-warn`    | `#fbbf24` | Degraded, slow, retrying                                         |
 | `--status-down`    | `#e0342a` | Failed, rejected, dead                                           |
@@ -169,9 +168,10 @@ fight the blue accent.
 | `--border-strong`  | `#d5bab1` | Hover / focus-adjacent border, emphasis dividers                 |
 | `--text`           | `#271815` | Primary text                                                     |
 | `--text-muted`     | `#6e5750` | Secondary text, descriptions, body copy inside cards              |
-| `--text-faint`     | `#9c847c` | Tertiary — labels, timestamps, disabled state                    |
+| `--text-faint`     | `#7a6259` | Tertiary — labels, timestamps, disabled state                    |
 | `--accent`         | `#1d4ed8` | Interactive elements, the one number that matters, active state  |
 | `--accent-dim`     | `#dbe6fb` | Accent at rest / secondary accent use (soft blue-tint chip fill) |
+| `--accent-foreground` | `#fffbf9` | Text/icon color *on top of* a filled `--accent` surface — light theme's accent is dark enough that near-white text passes AA here |
 | `--status-up`      | `#0a8f5b` | Healthy, success, passing (darkened for AA on a light canvas)    |
 | `--status-warn`    | `#a15c07` | Degraded, slow, retrying                                         |
 | `--status-down`    | `#b31c12` | Failed, rejected, dead                                           |
@@ -180,9 +180,8 @@ fight the blue accent.
 **Rules:**
 
 - Never introduce a new hue outside these tables without a documented
-  reason. Per-topic "accent" values (see §8) are the one sanctioned
-  exception, and even those are drawn from a fixed, pre-approved set — not
-  chosen freely per page.
+  reason. Per-topic "accent" values (see §8) and the brand mark's fixed
+  indigo/purple gradient (see §8) are the sanctioned exceptions.
 - No green outside `--status-up`. Not in a button, not in a link, not in a
   hover state, not in a decorative highlight. If a design calls for a
   second positive-feeling color, reach for the accent blue or a neutral,
@@ -199,10 +198,13 @@ fight the blue accent.
   `status-down` there is correct, not a second meaning.
 - Contrast floor: body text on `--panel` must clear WCAG AA (4.5:1) **in
   both themes independently** — don't assume a pair that passes in dark
-  mode passes in light mode with inverted lightness; verify each.
-- No gradients as a background treatment, in either theme. The one place a
-  subtle gradient is permitted is a *data* encoding (e.g. a heat gradient on
-  a load graph) — never on a hero, a card, or a button.
+  mode passes in light mode with inverted lightness; verify each. This
+  includes `--text-faint`: timestamps and labels are lower-emphasis than
+  `--text-muted`, not illegible — they still need to clear 4.5:1 against
+  `--panel`/`--bg`, just with less headroom than `--text-muted`.
+- Gradients are allowed only as the fixed brand-mark treatment (§8) or as a
+  *data* encoding (e.g. a heat gradient on a load graph) — never as
+  arbitrary hero/card/button decoration elsewhere.
 - Set `color-scheme: dark` / `color-scheme: light` alongside the theme
   attribute so native form controls, scrollbars, etc. match automatically.
 
@@ -211,27 +213,29 @@ fight the blue accent.
 ## 5. Typography
 
 Two typefaces, both from the Geist family already wired up via
-`next/font`: **Geist Sans** for prose and UI labels, **Geist Mono** for
-everything that is data, code, or terminal-flavored copy.
+`next/font`: **Geist Sans** for everything except data, **Geist Mono** for
+numbers, code, identifiers and log/terminal-flavored copy only.
 
 | Role                          | Font        | Size / weight                          |
 | ------------------------------ | ----------- | ---------------------------------------- |
 | Page title (H1)                | Sans        | `text-2xl sm:text-3xl`, `font-semibold`, tight tracking |
-| Section heading (H2)           | Mono        | `text-xs`, uppercase, tracked, `--accent` |
+| Section heading (H2)           | Sans        | `text-xs`–`text-sm`, uppercase or `font-semibold`, `--accent` |
 | Card title                     | Sans        | `text-base`, `font-medium`               |
 | Body / lesson prose            | Sans        | `text-sm`, `leading-relaxed`, `--text-muted` |
-| Data label (stat name, badge)  | Mono        | `text-[11px]`, uppercase, `--text-faint` |
+| Nav links, tabs, button labels | Sans        | `text-sm`, medium weight                 |
+| Data label (stat name, badge)  | Sans        | `text-[11px]`, uppercase, `--text-faint` |
 | Data value (stat number)       | Mono        | `text-sm`–`text-lg`, `font-semibold`     |
+| Log lines, timestamps, IDs     | Mono        | `text-xs`, `--text-muted`/`--text-faint` |
 | Inline code / commands         | Mono        | `text-sm`, `--text` on `--panel-raised`  |
 
 **Rules:**
 
-- A page's H1 is always sans. A page's section labels (the small
-  uppercase mono tag above a heading — see the study page's `Section`
-  component) are always mono. Don't swap these.
+- A page's H1 is always sans. Nav links, tabs and button labels are always
+  sans — monospace nav is the single most common way this system used to
+  read as "unfriendly," so don't bring it back piecemeal.
 - Never center large blocks of body prose. Left-align, `max-w-3xl` or
-  tighter for reading columns — this is a technical reading experience, not
-  a poster.
+  tighter for reading columns — this is still a technical reading
+  experience, just a comfortable one.
 - Line length for prose: aim for 60–75 characters per line
   (`max-w-prose`/`max-w-3xl` territory). Wider than that and dense
   systems-design explanations get hard to track line-to-line.
@@ -245,18 +249,17 @@ everything that is data, code, or terminal-flavored copy.
 - **Spacing scale:** stick to Tailwind's default scale (`1`, `1.5`, `2`,
   `3`, `4`, `5`, `6`, `8`, `10`, `14`...). Don't invent arbitrary pixel
   values.
-- **Radius:** `rounded` (4px) for chips/badges/inline elements, `rounded-lg`
-  (8px) for cards and panels. Nothing rounder than that — no pill buttons,
-  no `rounded-2xl`/`rounded-3xl`. Sharp-ish corners read as instrument, not
-  toy.
-- **Elevation is a border, not a shadow.** Surfaces are distinguished by
-  `--panel` vs `--panel-raised` background and a 1px `--border`, not by
-  drop shadow. The only shadow in the system is the subtle one under the
-  sticky top nav, and even that should stay close to invisible
-  (`backdrop-blur` + a hairline border does most of the work already).
-- **Density:** default card padding `p-4`–`p-5`. Don't pad dashboard/control
-  surfaces like marketing cards (`p-8`+) — that wastes vertical space a
-  practitioner would rather spend on data.
+- **Radius:** `rounded-lg` (8px) for small chips/inline controls,
+  `rounded-xl` (12px) for buttons and small cards, `rounded-2xl` (16px) for
+  larger panels and hero-adjacent surfaces. Corners should read as soft and
+  modern, not sharp/instrument-like and not pill-shaped everywhere — reserve
+  fully-rounded (`rounded-full`) for pill buttons/tabs and status chips.
+- **Elevation:** a hairline `--border` plus a soft, subtle shadow on cards
+  and the sticky top nav is welcome now (`shadow-sm`-scale, never a heavy
+  drop shadow) — surfaces can read as gently raised, not perfectly flat.
+- **Density:** default card padding `p-5`–`p-6`. Control/simulation
+  surfaces can drop to `p-4` where information density genuinely benefits
+  (see §10), but that's the exception, not the house default.
 
 ---
 
@@ -271,19 +274,16 @@ everything that is data, code, or terminal-flavored copy.
 - **Mechanism:** a `data-theme="dark" | "light"` attribute on `<html>`,
   set before first paint (inline script or equivalent) to avoid a
   flash-of-wrong-theme. `app/globals.css` defines both token sets from §4
-  under `[data-theme="dark"]` / `[data-theme="light"]` selectors (or
-  `:root` + an override class — whichever `@theme inline` in Tailwind v4
-  makes cheapest) and nothing else needs to change per-theme, because every
-  component is already built on the custom-property tokens rather than
-  hard-coded colors.
-- **The toggle itself stays in house style.** Not a generic sun/moon icon
-  pair with a sliding pill animation — that's the one piece of "AI SaaS"
-  furniture that would sneak this exact anti-pattern back in through the
-  side door (see §2). Use a small mono control consistent with the rest of
-  the chrome: e.g. bracketed text (`[dark]` / `[light]`) or a single-glyph
-  toggle next to the nav links in `TopNav`, `text-xs` mono, muted at rest,
-  `--text` on hover/active — the same visual register as the `topics` nav
-  link beside it, not a separate "settings widget" style.
+  under `[data-theme="dark"]` / `[data-theme="light"]` selectors and
+  nothing else needs to change per-theme, because every component is
+  already built on the custom-property tokens rather than hard-coded
+  colors.
+- **The toggle itself is a small, friendly icon control** — a sun/moon
+  glyph switch next to the nav links in `TopNav`, with a quick
+  `transition-colors`/`transition-transform` on flip. This is a deliberate
+  reversal of an earlier, more austere version of this system that banned
+  the sun/moon pattern as "too SaaS" — for this friendlier direction, the
+  familiar icon is the right amount of polish, not a red flag.
 - **No theme-crossfade choreography.** Switching themes swaps token values;
   a brief `transition-colors` (see §11) on background/border/text is enough.
   Don't build a special animated transition just for the toggle moment.
@@ -294,39 +294,46 @@ everything that is data, code, or terminal-flavored copy.
 
 ---
 
-## 8. The background canvas and per-topic accent
+## 8. The background canvas, the brand mark, and per-topic accent
 
-The dot-grid background (`radial-gradient(var(--border) 1px, transparent
-1px)` at `24px 24px`) is the one ambient texture in the system, present in
-both themes with `--border` doing the adapting. It reads as "engineering
-canvas / blueprint grid," reinforcing that every topic is a diagram surface.
-Keep it subtle — it's a hint, not a pattern. Don't add a second background
-texture anywhere.
+Keep the page background simple — a plain `--bg` canvas, no ambient
+texture. (An earlier version of this system used a faint dot-grid
+"blueprint" texture to signal "engineering tool"; that's dropped along with
+the rest of the instrument-panel framing — it's one more thing that read as
+cold rather than inviting.)
 
-Each topic may carry a small identity: an accent hue for its own pages and a
-single emoji used only in the topic's own card/nav context (never inline in
-prose). This is the one place a broader color vocabulary and a literal emoji
-are allowed, and it should stay restrained — a topic accent shifts a border
-or a small set of interactive elements on *its own* pages; it never
-overrides the global `--accent` blue used for site-wide interactive chrome
-(nav, primary links). Per-topic accents still may not use green (§3.5).
+The brand mark (`components/brand/logo.tsx`) is the one place a gradient
+and a non-blue hue are permanently sanctioned: a lowercase "u" — for
+Uttam, and for "you" — with a rising spark above its open stem, on a fixed
+indigo-to-purple gradient tile (`#6366f1` → `#7c3aed` → `#a855f7`). This is
+a fixed identity asset, not a decorative pattern to reuse elsewhere — don't
+pull that gradient into buttons, cards or backgrounds; it belongs to the
+mark alone.
+
+Each topic may carry a small identity: an accent hue for its own pages and
+a single emoji used only in the topic's own card/nav context (never inline
+in prose). A topic accent shifts a border or a small set of interactive
+elements on *its own* pages; it never overrides the global `--accent` blue
+used for site-wide interactive chrome (nav, primary links). Per-topic
+accents still may not use green (§3.5).
 
 ---
 
 ## 9. Voice and content style
 
-Copy is part of the design system — a dashboard that looks restrained but
-reads like ad copy breaks the illusion immediately.
+Copy is part of the design system — a page that looks friendly but reads
+like a man page breaks the illusion immediately, and one that reads like ad
+copy breaks it the other way.
 
-- **Direct, technical, second person where it helps ("watch what actually
+- **Direct and warm, second person where it helps ("watch what actually
   happens"), never hype-driven.** No "unlock," "supercharge," "revolutionize,"
-  "game-changing," "in just minutes."
+  "game-changing," "in just minutes" — friendly is not the same as hypey.
 - **Show, don't sell.** "Every topic below is a running simulation, not a
   page of prose" is the house voice: a factual claim the reader can verify
   immediately, not an adjective-stacked pitch.
-- **Terminal flourishes are single-use, at entry points.** A `$ ulearn
-  --list-topics`-style line works once per page, near the top, as a tonal
-  anchor. Don't scatter fake shell prompts throughout body copy.
+- **Terminal flourishes, if used at all, are single-use and optional** —
+  fine as a rare accent at an entry point, never the framing device for a
+  whole page and never required just to feel "technical enough."
 - **Precision over enthusiasm in labels.** "available" / "planned," not
   "Coming Soon! 🎉". Status language matches the status-dot system in §4.
 - **Explanations earn their length.** Systems-design nuance (e.g. why IP
@@ -339,34 +346,38 @@ reads like ad copy breaks the illusion immediately.
 ## 10. Core components (patterns already in use — keep extensions consistent with these)
 
 - **Top nav** — sticky, `h-14`, `--panel`/`bg-bg/90` + blur, hairline bottom
-  border, wordmark is a monospace `u` mark plus `ulearn/<section>`. Nav
-  links are mono, muted, brighten on hover. Keep navigation minimal — this
-  is not a site with a mega-menu.
-- **Topic card** — `panel` surface, hairline border that brightens on hover
-  (`border-strong`), a mono category eyebrow + status dot up top, sans title,
-  muted sans tagline, mono "open simulation →" affordance that appears on
+  border, brand mark (§8) plus sans wordmark. Nav links are sans, medium
+  weight, muted, brighten on hover. Keep navigation minimal — this is not a
+  site with a mega-menu.
+- **Topic card** — `panel` surface, `rounded-2xl`, hairline border that
+  brightens on hover (`border-strong`) plus a soft shadow lift, a sans
+  uppercase category eyebrow + status dot up top, sans title, muted sans
+  tagline, sans "open simulation →" affordance that appears on
   hover/focus. Unavailable topics are the same shape at `opacity-60` with an
   "idle" dot and no link — never hide planned content, show it as inert.
-- **Stat bar** — inline mono label/value pairs, colored only when the value
-  is a status count (success/error/timeout), otherwise `--text`. Never
-  turned into individual boxed "KPI cards" — that's SaaS-dashboard framing
-  we're avoiding; a dense inline row is more instrument-like.
+- **Stat bar** — inline label/value pairs (sans label, mono value), colored
+  only when the value is a status count (success/error/timeout), otherwise
+  `--text`. A dense inline row is fine here since it's read at a glance
+  while a simulation runs — this is the one place §3.6's density exception
+  applies most directly.
 - **Status dot** — 6px filled circle, one of five states (`up`, `warn`,
   `down`, `active`, `idle`). This is the *only* status affordance — don't
   introduce a second visual language (e.g. colored pills) for the same
   concept.
-- **Section / AlgoCard (study pages)** — mono uppercase accent-colored
+- **Section / AlgoCard (study pages)** — sans uppercase accent-colored
   eyebrow above a sans H2-equivalent, hairline top border between sections
   (first section has none). Concept cards inside a section are `panel` +
-  hairline border, mono name, muted sans explanation. Comparison tables use
-  `panel-raised` headers, mono uppercase column labels, hairline row
-  dividers — this is the pattern for any future Layer 4 vs Layer 7-style
-  comparison content.
-- **Buttons / controls** (simulation toggles, algorithm switches) — outline
-  by default (`border`, transparent fill), accent border/text when active,
-  never a filled gradient or heavy drop-shadow button. Destructive/failure
-  actions (e.g. "Kill" a backend) use `status-down` red, consistent with
-  §4's rule that status-down always means "this failed" or "this destroys."
+  hairline border + `rounded-xl`, sans name, muted sans explanation.
+  Comparison tables use `panel-raised` headers, sans uppercase column
+  labels, hairline row dividers — this is the pattern for any future Layer
+  4 vs Layer 7-style comparison content.
+- **Buttons / controls** (simulation toggles, algorithm switches) —
+  `rounded-full` for compact toggle-style controls, `rounded-xl` for
+  standalone action buttons. Primary/active state gets a filled accent
+  background; inactive state is outlined with sans labels. Destructive/
+  failure actions (e.g. "Kill" a backend) use `status-down` red, consistent
+  with §4's rule that status-down always means "this failed" or "this
+  destroys."
 
 When adding a new component, find the closest existing pattern in this list
 and extend it rather than inventing a new visual idiom.
@@ -375,13 +386,14 @@ and extend it rather than inventing a new visual idiom.
 
 ## 11. Motion
 
-- Transitions are short and functional: `transition-colors` on hover/focus
-  states, nothing longer than ~200ms for UI chrome.
+- Transitions are short and functional: `transition-colors`/`transition-transform`
+  on hover/focus states, generally under ~200ms for UI chrome — a little
+  scale or lift on button/card hover is welcome for warmth, kept subtle.
 - Simulation motion (a request traveling along a path, a state machine
   flipping) is the one place slower, purposeful animation belongs — it's
   explaining a real state change, so give it enough duration to be readable
   (300–600ms depending on what's being shown), with easing that reads as
-  physical/systemic (ease-in-out) rather than bouncy or springy.
+  physical (ease-in-out) rather than bouncy or springy.
 - No scroll-triggered reveal animations, no parallax, no auto-playing
   carousels. The reader controls pacing, not the page.
 
@@ -394,8 +406,8 @@ and extend it rather than inventing a new visual idiom.
   alone.
 - Focus states are the accent-colored 2px outline already defined in
   `globals.css` (`:focus-visible`). Never suppress it; never replace it with
-  a subtler alternative — this is a keyboard-navigable technical tool, and
-  visible focus matters more here than on a marketing site.
+  a subtler alternative — this is still a keyboard-navigable tool, and
+  visible focus matters regardless of how friendly the chrome looks.
 - Maintain AA contrast for all text/background pairs in §4; re-check when
   introducing a new muted tone or an accent-on-accent combination (e.g.
   accent text on a panel-raised background).
@@ -409,21 +421,19 @@ and extend it rather than inventing a new visual idiom.
 
 ## 13. Page templates
 
-- **Home (`/`)** — mono command-line eyebrow, sans H1 stating the site's
-  actual mechanism ("System architectures, taken apart live"), one muted
-  sans paragraph of explanation, then straight into the topic card grid. No
-  secondary marketing sections below the fold (no testimonials, no logo
-  wall, no pricing, no newsletter capture) — the card grid *is* the whole
-  page.
+- **Home (`/`)** — sans H1 stating the site's actual mechanism ("System
+  architectures, taken apart live"), one muted sans paragraph of
+  explanation, then straight into the topic card grid. No secondary
+  marketing sections below the fold (no testimonials, no logo wall, no
+  pricing, no newsletter capture) — the card grid *is* the whole page, just
+  presented with more warmth and room than a bare dashboard would give it.
 - **Topic hub (`/topics/<slug>`)** — the simulation is the page. Controls
   and stats bar frame it; there is no separate "hero" above the simulation
   competing for attention.
 - **Study (`/topics/<slug>/study`)** — pure reading surface: stacked
-  `Section`s, `max-w-3xl`, mono eyebrows, sans prose, comparison tables and
+  `Section`s, `max-w-3xl`, sans eyebrows, sans prose, comparison tables and
   concept cards where useful. This is the one page type that's allowed to
-  feel like an article rather than a dashboard, and even then it borrows the
-  dashboard's mono/sans discipline rather than switching to a different
-  typographic voice.
+  feel like a well-designed article rather than a dashboard.
 
 ---
 

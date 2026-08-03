@@ -42,4 +42,59 @@ export const topics: readonly Topic[] = [
     category: "Data & Caching",
     status: "planned",
   },
+  {
+    slug: "redis-protocol",
+    title: "Redis Protocol",
+    tagline:
+      "RESP wire format and pipelining — why a single-threaded event loop can still be this fast.",
+    category: "Data & Caching",
+    status: "planned",
+  },
+  {
+    slug: "rabbitmq-vs-kafka",
+    title: "RabbitMQ vs Kafka",
+    tagline: "Smart broker vs dumb log — routing exchanges against partitioned, replayable topics.",
+    category: "Async & Messaging",
+    status: "planned",
+  },
+  {
+    slug: "resilient-message-handling",
+    title: "Resilient Message Handling",
+    tagline:
+      "Retries, dead-letter queues and idempotency keys — getting a message processed exactly once, not zero or twice.",
+    category: "Async & Messaging",
+    status: "planned",
+  },
+  {
+    slug: "concurrency-vs-parallelism",
+    title: "Concurrency vs Parallelism vs Multithreading vs Multiprocessing",
+    tagline:
+      "Threads, processes and the GIL — what's actually running at once versus what's just interleaved.",
+    category: "Compute & Concurrency",
+    status: "planned",
+  },
+  {
+    slug: "rbac",
+    title: "RBAC",
+    tagline:
+      "Role-based access control for multi-tenant systems — roles, permissions, and where the check actually runs.",
+    category: "Auth & Access",
+    status: "planned",
+  },
+  {
+    slug: "multi-tenancy",
+    title: "Multi-Tenancy",
+    tagline:
+      "Shared schema, siloed schema, or siloed database — isolating tenants without running N copies of your app.",
+    category: "Architecture",
+    status: "planned",
+  },
+  {
+    slug: "socket-io",
+    title: "Socket.IO",
+    tagline:
+      "How Socket.IO actually works — the polling-to-websocket upgrade handshake, rooms, and reconnection.",
+    category: "Traffic & Routing",
+    status: "planned",
+  },
 ];

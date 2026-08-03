@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="border-t border-border pt-6 first:border-t-0 first:pt-0">
-      <h2 className="font-mono text-xs tracking-wide text-accent uppercase">{title}</h2>
+      <h2 className="text-xs font-semibold tracking-wide text-accent uppercase">{title}</h2>
       <div className="mt-3 space-y-3 text-sm leading-relaxed text-text-muted">{children}</div>
     </section>
   );
@@ -21,8 +21,8 @@ function AlgoCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded border border-border bg-panel p-4">
-      <p className="font-mono text-xs font-semibold text-text">{name}</p>
+    <div className="rounded-xl border border-border bg-panel p-4 shadow-sm">
+      <p className="text-sm font-semibold text-text">{name}</p>
       <div className="mt-2 text-sm leading-relaxed text-text-muted">{children}</div>
     </div>
   );
@@ -144,10 +144,10 @@ export default function LoadBalancerStudyPage() {
           into two distinct categories based on which layer of the network
           stack they operate at:
         </p>
-        <div className="overflow-x-auto rounded border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-border bg-panel-raised font-mono text-xs text-text-faint uppercase">
+              <tr className="border-b border-border bg-panel-raised text-xs font-semibold text-text-faint uppercase">
                 <th className="px-3 py-2 font-medium">&nbsp;</th>
                 <th className="px-3 py-2 font-medium">Layer 4 (transport)</th>
                 <th className="px-3 py-2 font-medium">Layer 7 (application)</th>
