@@ -96,11 +96,11 @@ be honest about. We have content. Be honest about it instead.
    ulearn --list-topics`) are a seasoning, used at entry points to set tone.
    They are not the whole meal — we don't fake an entire fictional CLI
    session on every page.
-4. **One accent color, used sparingly.** A red (`--accent`) marks
+4. **One accent color, used sparingly.** A blue (`--accent`) marks
    interactivity and the single most important number on a screen. If
    everything is accented, nothing is. This is the brand's one hue outside
-   the neutral canvas — no blues, purples or greens anywhere in chrome,
-   buttons, links or highlights.
+   the neutral canvas — no reds (outside `status-down`), purples or greens
+   anywhere in chrome, buttons, links or highlights.
 5. **Status color means one thing, everywhere — and `--accent` is not a
    status color.** Green/amber/red/blue map to healthy/warning/down/in-flight
    in every simulation, every table, every badge, with no exceptions and no
@@ -109,9 +109,9 @@ be honest about. We have content. Be honest about it instead.
    a convention practitioners read faster than they read a legend, and
    inventing a replacement would cost clarity for no real gain. Everywhere
    else — brand, links, buttons, emphasis — green does not appear.
-   `--accent` (brand red) and `status-down` (alert red) are deliberately
-   *different* reds (see §4) so "click this" and "this failed" never look
-   like the same signal.
+   `--accent` (brand blue) and `status-active` (in-flight blue) are
+   deliberately *different* blues (see §4) so "click this" and "this is
+   currently processing" never look like the same signal.
 6. **Density over whitespace-for-its-own-sake.** Dashboards for practitioners
    are allowed to be dense — see §10. Generous whitespace is for prose
    reading columns, not for control panels.
@@ -125,7 +125,7 @@ be honest about. We have content. Be honest about it instead.
 ## 4. Color
 
 The palette is deliberately narrow: a near-neutral canvas, two panel
-elevations, one brand accent (red), and four status colors reused
+elevations, one brand accent (blue), and four status colors reused
 everywhere. Both themes share the same *structure* — the same token names,
 the same relationships between them — and differ only in value. Implement
 both sets as CSS custom properties in `app/globals.css`, switched by a
@@ -133,10 +133,11 @@ both sets as CSS custom properties in `app/globals.css`, switched by a
 their spec.
 
 The neutrals in both themes carry a faint warm cast — a "skin tint" rather
-than a clinical, blue-tinted gray — so they sit naturally next to the red
-accent instead of fighting it. It should read as warm and considered, not
-pink: keep the tint subtle enough that `--bg` and `--panel` still read as
-"black" / "off-white" at a glance.
+than a clinical, blue-tinted gray — so they sit as a considered neutral
+canvas rather than a cold, generic dashboard gray. It should read as warm
+and considered, not pink: keep the tint subtle enough that `--bg` and
+`--panel` still read as "black" / "off-white" at a glance, and don't let it
+fight the blue accent.
 
 ### Dark theme (default when the OS prefers dark)
 
@@ -150,12 +151,12 @@ pink: keep the tint subtle enough that `--bg` and `--panel` still read as
 | `--text`           | `#eee6e3` | Primary text                                                     |
 | `--text-muted`     | `#a3928c` | Secondary text, descriptions, body copy inside cards              |
 | `--text-faint`     | `#6d5c56` | Tertiary — labels, timestamps, disabled state                    |
-| `--accent`         | `#fb5145` | Interactive elements, the one number that matters, active state  |
-| `--accent-dim`     | `#7f2018` | Accent at rest / secondary accent use                            |
+| `--accent`         | `#4c8dfb` | Interactive elements, the one number that matters, active state  |
+| `--accent-dim`     | `#1d3a66` | Accent at rest / secondary accent use                            |
 | `--status-up`      | `#34d399` | Healthy, success, passing (the one sanctioned green — see §3.5)  |
 | `--status-warn`    | `#fbbf24` | Degraded, slow, retrying                                         |
-| `--status-down`    | `#e0342a` | Failed, rejected, dead — a *different* red from `--accent`       |
-| `--status-active`  | `#60a5fa` | In-flight / currently processing                                 |
+| `--status-down`    | `#e0342a` | Failed, rejected, dead                                           |
+| `--status-active`  | `#22d3ee` | In-flight / currently processing — a *different* blue from `--accent` |
 
 ### Light theme (default when the OS prefers light)
 
@@ -169,12 +170,12 @@ pink: keep the tint subtle enough that `--bg` and `--panel` still read as
 | `--text`           | `#271815` | Primary text                                                     |
 | `--text-muted`     | `#6e5750` | Secondary text, descriptions, body copy inside cards              |
 | `--text-faint`     | `#9c847c` | Tertiary — labels, timestamps, disabled state                    |
-| `--accent`         | `#b3241b` | Interactive elements, the one number that matters, active state  |
-| `--accent-dim`     | `#f2d3cd` | Accent at rest / secondary accent use (soft red-tint chip fill)  |
+| `--accent`         | `#1d4ed8` | Interactive elements, the one number that matters, active state  |
+| `--accent-dim`     | `#dbe6fb` | Accent at rest / secondary accent use (soft blue-tint chip fill) |
 | `--status-up`      | `#0a8f5b` | Healthy, success, passing (darkened for AA on a light canvas)    |
 | `--status-warn`    | `#a15c07` | Degraded, slow, retrying                                         |
-| `--status-down`    | `#b31c12` | Failed, rejected, dead — a *different* red from `--accent`       |
-| `--status-active`  | `#1d4ed8` | In-flight / currently processing                                 |
+| `--status-down`    | `#b31c12` | Failed, rejected, dead                                           |
+| `--status-active`  | `#0e7490` | In-flight / currently processing — a *different* blue from `--accent` |
 
 **Rules:**
 
@@ -184,13 +185,13 @@ pink: keep the tint subtle enough that `--bg` and `--panel` still read as
   chosen freely per page.
 - No green outside `--status-up`. Not in a button, not in a link, not in a
   hover state, not in a decorative highlight. If a design calls for a
-  second positive-feeling color, reach for the accent red or a neutral, not
-  green.
-- `--accent` and `--status-down` are both reds and must stay visibly
-  different reds (compare the hex pairs above — accent leans warmer/more
-  coral, status-down leans more saturated/alarm) so "this is clickable" and
-  "this failed" are never the same signal. Never substitute one for the
-  other even though they're in the same family.
+  second positive-feeling color, reach for the accent blue or a neutral,
+  not green.
+- `--accent` and `--status-active` are both blues and must stay visibly
+  different blues (compare the hex pairs above — accent leans more
+  indigo/azure, status-active leans more cyan/teal) so "this is clickable"
+  and "this is currently processing" are never the same signal. Never
+  substitute one for the other even though they're in the same family.
 - Status colors are semantic, not decorative. `status-down` must always mean
   "this thing failed," never reused as a generic "important" or
   "destructive-button" red distinct from that meaning — a destructive
@@ -307,7 +308,7 @@ single emoji used only in the topic's own card/nav context (never inline in
 prose). This is the one place a broader color vocabulary and a literal emoji
 are allowed, and it should stay restrained — a topic accent shifts a border
 or a small set of interactive elements on *its own* pages; it never
-overrides the global `--accent` red used for site-wide interactive chrome
+overrides the global `--accent` blue used for site-wide interactive chrome
 (nav, primary links). Per-topic accents still may not use green (§3.5).
 
 ---

@@ -45,13 +45,13 @@
   --text-muted: #a3928c;
   --text-faint: #6d5c56;
 
-  --accent: #fb5145;
-  --accent-dim: #7f2018;
+  --accent: #4c8dfb;
+  --accent-dim: #1d3a66;
 
   --status-up: #34d399;
   --status-warn: #fbbf24;
   --status-down: #e0342a;
-  --status-active: #60a5fa;
+  --status-active: #22d3ee;
 
   color-scheme: dark;
 }
@@ -67,13 +67,13 @@
   --text-muted: #6e5750;
   --text-faint: #9c847c;
 
-  --accent: #b3241b;
-  --accent-dim: #f2d3cd;
+  --accent: #1d4ed8;
+  --accent-dim: #dbe6fb;
 
   --status-up: #0a8f5b;
   --status-warn: #a15c07;
   --status-down: #b31c12;
-  --status-active: #1d4ed8;
+  --status-active: #0e7490;
 
   color-scheme: light;
 }
