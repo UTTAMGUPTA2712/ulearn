@@ -1,6 +1,11 @@
 import { cn } from "@/lib/utils/cn";
 
-import type { LogEntry } from "../_lib/types";
+export type LogEntry = {
+  id: number | string;
+  time: number;
+  level: "info" | "warn" | "error";
+  message: string;
+};
 
 const LEVEL_COLOR: Record<LogEntry["level"], string> = {
   info: "text-text-muted",
@@ -8,6 +13,7 @@ const LEVEL_COLOR: Record<LogEntry["level"], string> = {
   error: "text-status-down",
 };
 
+/** Scrolling event log for a running simulation. Genuinely a log, so it stays monospace. */
 export function EventLog({ entries, className }: { entries: LogEntry[]; className?: string }) {
   return (
     <div className={className}>

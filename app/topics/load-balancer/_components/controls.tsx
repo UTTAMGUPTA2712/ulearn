@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/simulation/button";
 
 import type { Algorithm, Backend, Fault } from "../_lib/types";
 
@@ -16,36 +16,6 @@ const FAULTS: { value: Fault; label: string }[] = [
   { value: "overloaded", label: "Overloaded" },
   { value: "timeout", label: "Timeout" },
 ];
-
-function Button({
-  active,
-  danger,
-  primary,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  active?: boolean;
-  danger?: boolean;
-  primary?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all",
-        primary
-          ? "border-accent bg-accent text-accent-foreground hover:opacity-90"
-          : active
-            ? danger
-              ? "border-status-down bg-status-down/15 text-status-down"
-              : "border-accent bg-accent/15 text-accent"
-            : "border-border text-text-muted hover:border-border-strong hover:text-text",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
 
 export function AlgorithmSwitch({
   algorithm,

@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 
 import { Container } from "@/components/layout/container";
-
-import { TopicTabs } from "./_components/topic-tabs";
+import { TopicTabs } from "@/components/topic/topic-tabs";
 
 export const metadata: Metadata = {
   title: "Load Balancer",
 };
+
+const TABS = [
+  { href: "/topics/load-balancer", label: "Simulate" },
+  { href: "/topics/load-balancer/study", label: "Study" },
+];
 
 export default function LoadBalancerLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,7 +23,7 @@ export default function LoadBalancerLayout({ children }: { children: React.React
       </p>
 
       <div className="mt-6">
-        <TopicTabs />
+        <TopicTabs tabs={TABS} />
       </div>
 
       <div className="mt-6">{children}</div>

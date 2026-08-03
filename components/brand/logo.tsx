@@ -16,9 +16,9 @@ export function LogoMark({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient id="ulearn-mark-gradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6366f1" />
-          <stop offset="55%" stopColor="#7c3aed" />
-          <stop offset="100%" stopColor="#a855f7" />
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="55%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1d4ed8" />
         </linearGradient>
       </defs>
 

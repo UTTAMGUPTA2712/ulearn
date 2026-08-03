@@ -1,8 +1,10 @@
 /**
  * The topic list. Just enough to render the homepage index — it is not a
- * content engine. Each topic's actual page, simulation and study material is
- * hand-built under its own `app/topics/<slug>/` route with nothing shared
- * between topics beyond this listing entry and the page shell components.
+ * content engine. Each topic's simulation logic and copy is hand-built under
+ * its own `app/topics/<slug>/` route, but the recurring UI pieces (buttons,
+ * stats bar, event log, topic tabs, study-page Section/ConceptCard/
+ * ComparisonTable/TableOfContents) live in `components/` and should be
+ * reused rather than re-implemented per topic — see docs/DESIGN-SYSTEM.md §10.
  */
 export type Topic = {
   slug: string;

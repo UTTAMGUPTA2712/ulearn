@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { THEME_STORAGE_KEY, type Theme } from "@/lib/theme";
 
@@ -11,7 +11,16 @@ function readTheme(): Theme {
 
 /** Manual theme override — a small friendly sun/moon icon switch (see §7). */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(readTheme);
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setMounted(true);
+      setTheme(readTheme());
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   function toggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";
@@ -21,6 +30,17 @@ export function ThemeToggle() {
     setTheme(next);
   }
 
+  if (!mounted) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-hidden="true"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted opacity-0"
+      />
+    );
+  }
+
   return (
     <button
       type="button"
@@ -28,7 +48,7 @@ export function ThemeToggle() {
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
       className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-panel-raised hover:text-text"
     >
-      <span suppressHydrationWarning>
+      <span>
         {theme === "dark" ? (
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
             <path d="M12 3a9 9 0 1 0 9 9c0-.34-.02-.68-.05-1.01A6.5 6.5 0 0 1 12 3.05 8.9 8.9 0 0 0 12 3Z" />

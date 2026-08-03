@@ -131,27 +131,28 @@ them — and differ only in value. Implement both sets as CSS custom
 properties in `app/globals.css`, switched by a `data-theme` attribute on
 `<html>` (see §7); treat the tables below as their spec.
 
-The neutrals in both themes carry a faint warm cast — a "skin tint" rather
-than a clinical, blue-tinted gray — so the whole canvas feels human and
-considered rather than a cold, generic dashboard gray. It should read as
-warm and considered, not pink: keep the tint subtle enough that `--bg` and
-`--panel` still read as "near-black" / "off-white" at a glance.
+The neutrals in both themes carry a cool, faint blue cast — the same family
+as `--accent` and the brand mark's gradient (§8) — rather than a clinical
+pure gray or a warm/brown tint. This is deliberate: mark, accent and canvas
+all read as one blue-leaning palette instead of competing hues. Keep the
+tint subtle enough that `--bg` and `--panel` still read as "near-black" /
+"near-white" at a glance, not literally navy or baby blue.
 
 ### Dark theme (default when the OS prefers dark)
 
 | Token             | Value     | Use                                                             |
 | ------------------ | --------- | ---------------------------------------------------------------- |
-| `--bg`             | `#0e0b0a` | Page canvas — warm near-black, not blue-black                    |
-| `--panel`          | `#181211` | Cards, nav bar, default raised surface                          |
-| `--panel-raised`   | `#1f1614` | A surface raised *above* a panel (table headers, active tab)     |
-| `--border`         | `#2e2320` | Default hairline border                                          |
-| `--border-strong`  | `#40312c` | Hover / focus-adjacent border, emphasis dividers                 |
-| `--text`           | `#eee6e3` | Primary text                                                     |
-| `--text-muted`     | `#a3928c` | Secondary text, descriptions, body copy inside cards              |
-| `--text-faint`     | `#8f7c74` | Tertiary — labels, timestamps, disabled state                    |
+| `--bg`             | `#0b0f17` | Page canvas — cool near-black, blue-leaning                      |
+| `--panel`          | `#131a26` | Cards, nav bar, default raised surface                          |
+| `--panel-raised`   | `#1b2433` | A surface raised *above* a panel (table headers, active tab)     |
+| `--border`         | `#26303f` | Default hairline border                                          |
+| `--border-strong`  | `#37455a` | Hover / focus-adjacent border, emphasis dividers                 |
+| `--text`           | `#eef2f8` | Primary text                                                     |
+| `--text-muted`     | `#94a3b8` | Secondary text, descriptions, body copy inside cards              |
+| `--text-faint`     | `#7d8ca6` | Tertiary — labels, timestamps, disabled state                    |
 | `--accent`         | `#4c8dfb` | Interactive elements, the one number that matters, active state  |
 | `--accent-dim`     | `#1d3a66` | Accent at rest / secondary accent use                            |
-| `--accent-foreground` | `#0e0b0a` | Text/icon color *on top of* a filled `--accent` surface (a filled pill/button) — dark theme's accent is light enough that white text fails AA, so this is near-black instead |
+| `--accent-foreground` | `#0b0f17` | Text/icon color *on top of* a filled `--accent` surface (a filled pill/button) — dark theme's accent is light enough that white text fails AA, so this matches `--bg` instead |
 | `--status-up`      | `#34d399` | Healthy, success, passing (the one sanctioned green — see §3.5)  |
 | `--status-warn`    | `#fbbf24` | Degraded, slow, retrying                                         |
 | `--status-down`    | `#e0342a` | Failed, rejected, dead                                           |
@@ -161,17 +162,17 @@ warm and considered, not pink: keep the tint subtle enough that `--bg` and
 
 | Token             | Value     | Use                                                             |
 | ------------------ | --------- | ---------------------------------------------------------------- |
-| `--bg`             | `#faf3f0` | Page canvas — warm ivory, not stark white                        |
-| `--panel`          | `#fffbf9` | Cards, nav bar, default raised surface                          |
-| `--panel-raised`   | `#f5e6e1` | A surface raised *above* a panel (table headers, active tab)     |
-| `--border`         | `#e8d6d0` | Default hairline border                                          |
-| `--border-strong`  | `#d5bab1` | Hover / focus-adjacent border, emphasis dividers                 |
-| `--text`           | `#271815` | Primary text                                                     |
-| `--text-muted`     | `#6e5750` | Secondary text, descriptions, body copy inside cards              |
-| `--text-faint`     | `#7a6259` | Tertiary — labels, timestamps, disabled state                    |
+| `--bg`             | `#f4f7fb` | Page canvas — cool pale blue-white, not stark white               |
+| `--panel`          | `#ffffff` | Cards, nav bar, default raised surface                          |
+| `--panel-raised`   | `#e7edf6` | A surface raised *above* a panel (table headers, active tab)     |
+| `--border`         | `#d8e0ec` | Default hairline border                                          |
+| `--border-strong`  | `#b7c3d6` | Hover / focus-adjacent border, emphasis dividers                 |
+| `--text`           | `#10151f` | Primary text                                                     |
+| `--text-muted`     | `#52607a` | Secondary text, descriptions, body copy inside cards              |
+| `--text-faint`     | `#63728c` | Tertiary — labels, timestamps, disabled state                    |
 | `--accent`         | `#1d4ed8` | Interactive elements, the one number that matters, active state  |
 | `--accent-dim`     | `#dbe6fb` | Accent at rest / secondary accent use (soft blue-tint chip fill) |
-| `--accent-foreground` | `#fffbf9` | Text/icon color *on top of* a filled `--accent` surface — light theme's accent is dark enough that near-white text passes AA here |
+| `--accent-foreground` | `#ffffff` | Text/icon color *on top of* a filled `--accent` surface — light theme's accent is dark enough that near-white text passes AA here |
 | `--status-up`      | `#0a8f5b` | Healthy, success, passing (darkened for AA on a light canvas)    |
 | `--status-warn`    | `#a15c07` | Degraded, slow, retrying                                         |
 | `--status-down`    | `#b31c12` | Failed, rejected, dead                                           |
@@ -302,13 +303,14 @@ texture. (An earlier version of this system used a faint dot-grid
 the rest of the instrument-panel framing — it's one more thing that read as
 cold rather than inviting.)
 
-The brand mark (`components/brand/logo.tsx`) is the one place a gradient
-and a non-blue hue are permanently sanctioned: a lowercase "u" — for
-Uttam, and for "you" — with a rising spark above its open stem, on a fixed
-indigo-to-purple gradient tile (`#6366f1` → `#7c3aed` → `#a855f7`). This is
-a fixed identity asset, not a decorative pattern to reuse elsewhere — don't
-pull that gradient into buttons, cards or backgrounds; it belongs to the
-mark alone.
+The brand mark (`components/brand/logo.tsx`) is the one place a gradient is
+permanently sanctioned: a lowercase "u" — for Uttam, and for "you" — with a
+rising spark above its open stem, on a fixed blue gradient tile (`#60a5fa`
+→ `#3b82f6` → `#1d4ed8`, the same blue family as `--accent` so the mark and
+the UI read as one palette rather than clashing hues). This is a fixed
+identity asset, not a decorative pattern to reuse elsewhere — don't pull
+that gradient into buttons, cards or backgrounds; it belongs to the mark
+alone.
 
 Each topic may carry a small identity: an accent hue for its own pages and
 a single emoji used only in the topic's own card/nav context (never inline
@@ -345,39 +347,56 @@ copy breaks it the other way.
 
 ## 10. Core components (patterns already in use — keep extensions consistent with these)
 
-- **Top nav** — sticky, `h-14`, `--panel`/`bg-bg/90` + blur, hairline bottom
-  border, brand mark (§8) plus sans wordmark. Nav links are sans, medium
-  weight, muted, brighten on hover. Keep navigation minimal — this is not a
-  site with a mega-menu.
-- **Topic card** — `panel` surface, `rounded-2xl`, hairline border that
-  brightens on hover (`border-strong`) plus a soft shadow lift, a sans
-  uppercase category eyebrow + status dot up top, sans title, muted sans
-  tagline, sans "open simulation →" affordance that appears on
-  hover/focus. Unavailable topics are the same shape at `opacity-60` with an
-  "idle" dot and no link — never hide planned content, show it as inert.
-- **Stat bar** — inline label/value pairs (sans label, mono value), colored
-  only when the value is a status count (success/error/timeout), otherwise
-  `--text`. A dense inline row is fine here since it's read at a glance
-  while a simulation runs — this is the one place §3.6's density exception
-  applies most directly.
-- **Status dot** — 6px filled circle, one of five states (`up`, `warn`,
-  `down`, `active`, `idle`). This is the *only* status affordance — don't
-  introduce a second visual language (e.g. colored pills) for the same
-  concept.
-- **Section / AlgoCard (study pages)** — sans uppercase accent-colored
-  eyebrow above a sans H2-equivalent, hairline top border between sections
-  (first section has none). Concept cards inside a section are `panel` +
-  hairline border + `rounded-xl`, sans name, muted sans explanation.
-  Comparison tables use `panel-raised` headers, sans uppercase column
-  labels, hairline row dividers — this is the pattern for any future Layer
-  4 vs Layer 7-style comparison content.
-- **Buttons / controls** (simulation toggles, algorithm switches) —
-  `rounded-full` for compact toggle-style controls, `rounded-xl` for
-  standalone action buttons. Primary/active state gets a filled accent
-  background; inactive state is outlined with sans labels. Destructive/
-  failure actions (e.g. "Kill" a backend) use `status-down` red, consistent
-  with §4's rule that status-down always means "this failed" or "this
-  destroys."
+These are shared, topic-agnostic components under `components/` — a new
+topic should import and configure them, not re-implement its own version.
+Only the business logic wiring them up (what the buttons *do*, what the
+stats *are*) is topic-specific and belongs under `app/topics/<slug>/`.
+
+- **Top nav** (`components/layout/top-nav.tsx`) — sticky, `h-14`,
+  `--panel`/`bg-bg/90` + blur, hairline bottom border, brand mark (§8) plus
+  sans wordmark. Nav links are sans, medium weight, muted, brighten on
+  hover. Keep navigation minimal — this is not a site with a mega-menu.
+- **Topic card** (inline on the home page — no dedicated component yet) —
+  `panel` surface, `rounded-2xl`, hairline border that brightens on hover
+  (`border-strong`) plus a soft shadow lift, a sans uppercase category
+  eyebrow + status dot up top, sans title, muted sans tagline, sans "open
+  simulation →" affordance that appears on hover/focus. Unavailable topics
+  are the same shape at `opacity-60` with an "idle" dot and no link — never
+  hide planned content, show it as inert.
+- **Topic tabs** (`components/topic/topic-tabs.tsx`) — the Simulate/Study
+  pill nav at the top of a topic page. Takes a `tabs: {href, label}[]` prop
+  — a new topic passes its own paths, it doesn't fork the component.
+- **Stat bar** (`components/simulation/stats-bar.tsx`) — takes an
+  `items: StatItem[]` prop (`{label, value, color?}`). Inline label/value
+  pairs (sans label, mono value), colored only when the value is a status
+  count (success/error/timeout), otherwise `--text`. A dense inline row is
+  fine here since it's read at a glance while a simulation runs — this is
+  the one place §3.6's density exception applies most directly.
+- **Event log** (`components/simulation/event-log.tsx`) — takes an
+  `entries: LogEntry[]` prop (`{id, time, level, message}`). Scrolling,
+  monospace (it's genuinely log data), severity-colored by `level`.
+- **Buttons / controls** (`components/simulation/button.tsx`) —
+  `rounded-full`, outlined by default. `active` fills it with a translucent
+  accent/status-down tint; `primary` is a fully filled accent button for
+  the one primary action on a panel (e.g. "Send one request"); `danger`
+  swaps the accent tint for `status-down`, consistent with §4's rule that
+  status-down always means "this failed" or "this destroys." A topic's
+  `AlgorithmSwitch`/`TrafficControls`-equivalent components (its own
+  business logic) should compose this `Button`, not redefine it.
+- **Status dot** (`components/ui/status-dot.tsx`) — 6px filled circle, one
+  of five states (`up`, `warn`, `down`, `active`, `idle`). This is the
+  *only* status affordance — don't introduce a second visual language (e.g.
+  colored pills) for the same concept.
+- **Study page components** (`components/study/`) — `Section` (sans
+  uppercase accent-colored eyebrow above a sans H2-equivalent, hairline top
+  border between sections, auto-derives its anchor id from the title via
+  `slugify`), `ConceptCard` (`panel` + hairline border + `rounded-xl`, sans
+  name, muted sans explanation), `ComparisonTable` (`panel-raised` headers,
+  sans uppercase column labels, hairline row dividers, generic
+  `columns`/`rows` props), and `TableOfContents` (sticky "on this page" nav,
+  takes the same `sections: string[]` title list passed to each `Section` so
+  the anchors always match). This is the full pattern for any future study
+  page — reuse all four rather than hand-rolling prose components again.
 
 When adding a new component, find the closest existing pattern in this list
 and extend it rather than inventing a new visual idiom.

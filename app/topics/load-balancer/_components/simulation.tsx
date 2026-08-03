@@ -1,19 +1,28 @@
 "use client";
 
+import { EventLog } from "@/components/simulation/event-log";
+import { StatsBar } from "@/components/simulation/stats-bar";
+
 import { useLoadBalancerSimulation } from "../_lib/use-simulation";
 import { AlgorithmSwitch, BackendControls, TrafficControls } from "./controls";
 import { LoadBalancerDiagram } from "./diagram";
-import { EventLog } from "./event-log";
-import { StatsBar } from "./stats-bar";
 
 export function LoadBalancerSimulation() {
   const { snapshot, setAlgorithm, setWeight, toggleHealthy, setFault, setAutoStream, setDdos, sendOne } =
     useLoadBalancerSimulation();
 
+  const statItems = [
+    { label: "sent", value: snapshot.stats.sent },
+    { label: "success", value: snapshot.stats.success, color: "var(--status-up)" },
+    { label: "error", value: snapshot.stats.error, color: "var(--status-down)" },
+    { label: "timeout", value: snapshot.stats.timeout, color: "var(--status-warn)" },
+    { label: "rejected", value: snapshot.stats.rejected, color: "var(--status-down)" },
+  ];
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="flex flex-col gap-4">
-        <StatsBar stats={snapshot.stats} />
+        <StatsBar items={statItems} />
         <div className="h-[420px] shrink-0 rounded-2xl border border-border bg-panel shadow-sm">
           <LoadBalancerDiagram
             algorithm={snapshot.algorithm}
