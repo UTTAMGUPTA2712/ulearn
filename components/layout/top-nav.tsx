@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function TopNav() {
   return (
@@ -22,6 +23,18 @@ export function TopNav() {
           <Link href="/" className="transition-colors hover:text-text">
             topics
           </Link>
+          <Link href="/blog" className="transition-colors hover:text-text">
+            blog
+          </Link>
+          <a
+            href="https://uttamgupta2712.is-a.dev"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="transition-colors hover:text-text"
+          >
+            portfolio
+          </a>
+          <ThemeToggle />
         </nav>
       </Container>
     </header>

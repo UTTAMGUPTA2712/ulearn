@@ -1,10 +1,12 @@
 @import "tailwindcss";
 
 /*
- * Dark-only engineering-dashboard palette. No light mode, no theme toggle —
- * this is a tool for looking at systems, not a marketing site, and
- * committing to one theme keeps it simple and consistent (Grafana, Datadog
- * and most monitoring tools make the same call).
+ * Two first-class themes, one instrument (see docs/DESIGN-SYSTEM.md §3-4).
+ * Both share the same token names and structure and differ only in value,
+ * switched by a `data-theme="dark" | "light"` attribute set on <html>
+ * before first paint. Every component is built on these custom properties
+ * rather than hard-coded colors, so nothing below needs to change per-theme
+ * beyond this file.
  */
 @theme inline {
   --font-sans: var(--font-geist-sans);
@@ -31,26 +33,49 @@
   --color-status-active: var(--status-active);
 }
 
-:root {
-  --bg: #0a0b0e;
-  --panel: #12151b;
-  --panel-raised: #171b22;
-  --border: #232830;
-  --border-strong: #313945;
+:root,
+[data-theme="dark"] {
+  --bg: #0e0b0a;
+  --panel: #181211;
+  --panel-raised: #1f1614;
+  --border: #2e2320;
+  --border-strong: #40312c;
 
-  --text: #e4e7eb;
-  --text-muted: #8b929e;
-  --text-faint: #5b6472;
+  --text: #eee6e3;
+  --text-muted: #a3928c;
+  --text-faint: #6d5c56;
 
-  --accent: #22d3ee;
-  --accent-dim: #0e7490;
+  --accent: #fb5145;
+  --accent-dim: #7f2018;
 
   --status-up: #34d399;
   --status-warn: #fbbf24;
-  --status-down: #f87171;
+  --status-down: #e0342a;
   --status-active: #60a5fa;
 
   color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #faf3f0;
+  --panel: #fffbf9;
+  --panel-raised: #f5e6e1;
+  --border: #e8d6d0;
+  --border-strong: #d5bab1;
+
+  --text: #271815;
+  --text-muted: #6e5750;
+  --text-faint: #9c847c;
+
+  --accent: #b3241b;
+  --accent-dim: #f2d3cd;
+
+  --status-up: #0a8f5b;
+  --status-warn: #a15c07;
+  --status-down: #b31c12;
+  --status-active: #1d4ed8;
+
+  color-scheme: light;
 }
 
 @layer base {
@@ -68,6 +93,8 @@
     color: var(--text);
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* The one animation on theme switch itself — see §7: no crossfade choreography. */
+    transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
     /*
      * Faint dot grid — reads as "engineering canvas" rather than plain
      * background, and hints at the diagram surfaces used throughout.
@@ -78,7 +105,7 @@
 
   ::selection {
     background-color: var(--accent);
-    color: #04141a;
+    color: var(--bg);
   }
 
   :focus-visible {
