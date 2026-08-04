@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { RateLimiterEngine } from "./engine";
-import type { Algorithm, SimSnapshot } from "./types";
+import type { Algorithm, AttackType, SimSnapshot } from "./types";
 
 /** Caps how big a single tick's delta can be after the tab was backgrounded. */
 const MAX_DELTA_MS = 100;
@@ -40,7 +40,7 @@ export function useRateLimiterSimulation() {
     setWindowMs: (ms: number) => engine.setWindowMs(ms),
     setRefillRate: (rate: number) => engine.setRefillRate(rate),
     setAutoStream: (enabled: boolean, rate?: number) => engine.setAutoStream(enabled, rate),
-    setDdos: (active: boolean) => engine.setDdos(active),
+    setAttack: (attack: AttackType | null) => engine.setAttack(attack),
     setGlobalLimiter: (active: boolean) => engine.setGlobalLimiter(active),
     setGlobalCapacity: (capacity: number) => engine.setGlobalCapacity(capacity),
     setGlobalRefillRate: (rate: number) => engine.setGlobalRefillRate(rate),

@@ -1,6 +1,6 @@
 import { Button } from "@/components/simulation/button";
 
-import type { Algorithm, ClientState } from "../_lib/types";
+import type { Algorithm, AttackType, ClientState } from "../_lib/types";
 
 const ALGORITHMS: { value: Algorithm; label: string }[] = [
   { value: "fixed-window", label: "Fixed window" },
@@ -118,19 +118,15 @@ export function LimiterConfig({
 export function TrafficControls({
   autoStream,
   autoStreamRate,
-  ddosActive,
   onSendOne,
   onHammerClient,
   onSetAutoStream,
-  onSetDdos,
 }: {
   autoStream: boolean;
   autoStreamRate: number;
-  ddosActive: boolean;
   onSendOne: () => void;
   onHammerClient: () => void;
   onSetAutoStream: (enabled: boolean, rate?: number) => void;
-  onSetDdos: (active: boolean) => void;
 }) {
   return (
     <div>
@@ -155,9 +151,77 @@ export function TrafficControls({
             <span className="font-mono">{autoStreamRate}/s</span>
           </label>
         )}
-        <Button danger active={ddosActive} onClick={() => onSetDdos(!ddosActive)} className="ml-auto">
-          {ddosActive ? "Stop DDoS" : "Simulate DDoS"}
-        </Button>
+      </div>
+    </div>
+  );
+}
+
+const ATTACKS: { value: AttackType; label: string; reaches: boolean; description: string }[] = [
+  {
+    value: "http-flood",
+    label: "HTTP Flood",
+    reaches: true,
+    description: "Completes real requests from thousands of spoofed IPs — reaches the limiter, which waves each one through individually.",
+  },
+  {
+    value: "slowloris",
+    label: "Slowloris",
+    reaches: true,
+    description: "Opens connections but never finishes a request — nothing for a request-counting limiter to see, so it bypasses both limiters and ties up raw connection slots instead.",
+  },
+  {
+    value: "syn-flood",
+    label: "SYN Flood",
+    reaches: false,
+    description: "Never completes a TCP handshake — there's no HTTP request, so it never reaches this diagram's rate limiter at all. Handled by the OS/network stack (SYN cookies, firewalls).",
+  },
+  {
+    value: "udp-amplification",
+    label: "UDP Amplification",
+    reaches: false,
+    description: "Pure volumetric traffic aimed at saturating bandwidth upstream of the server — no rate limiter here has any visibility into it. Needs edge/CDN-level scrubbing.",
+  },
+];
+
+export function AttackControls({
+  activeAttack,
+  onSetAttack,
+}: {
+  activeAttack: AttackType | null;
+  onSetAttack: (attack: AttackType | null) => void;
+}) {
+  const current = ATTACKS.find((a) => a.value === activeAttack);
+
+  return (
+    <div>
+      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Attack simulation</p>
+      <div className="mt-2 space-y-2.5 rounded-xl border border-border bg-panel p-3">
+        <div className="flex flex-wrap gap-1.5">
+          {ATTACKS.map((a) => (
+            <Button
+              key={a.value}
+              danger
+              active={activeAttack === a.value}
+              onClick={() => onSetAttack(activeAttack === a.value ? null : a.value)}
+            >
+              {a.label}
+            </Button>
+          ))}
+        </div>
+        {current ? (
+          <p className="text-[11px] text-text-muted">
+            <span className={current.reaches ? "text-status-down" : "text-status-active"}>
+              {current.reaches ? "Reaches the limiter — " : "Never reaches the app layer — "}
+            </span>
+            {current.description}
+          </p>
+        ) : (
+          <p className="text-[11px] text-text-faint">
+            Pick an attack type. HTTP Flood and Slowloris are HTTP-layer floods this diagram can
+            actually route; SYN Flood and UDP Amplification operate below the HTTP layer and never
+            reach a rate limiter at all — watch them get intercepted at the network edge instead.
+          </p>
+        )}
       </div>
     </div>
   );

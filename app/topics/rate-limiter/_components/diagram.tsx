@@ -1,11 +1,42 @@
-import type { RequestPacket } from "../_lib/types";
+import type { AttackType, BlockedPacket, RequestPacket } from "../_lib/types";
 
 const VIEW_W = 720;
 const VIEW_H = 420;
+const NETWORK_EDGE = { x: 20, y: VIEW_H / 2 };
 const CLIENT = { x: 60, y: VIEW_H / 2 };
 const LIMITER = { x: 330, y: VIEW_H / 2 };
 const GLOBAL = { x: 505, y: VIEW_H / 2 };
 const API = { x: 655, y: VIEW_H / 2 };
+
+/** How long a blocked network-layer flash stays visible — must match the engine's BLOCKED_LIFETIME_MS. */
+const BLOCKED_LIFETIME_MS = 420;
+
+/** Deterministic scatter for Slowloris connections parked around the API node — golden angle avoids visible banding. */
+function heldOffset(id: number) {
+  const angle = id * 2.399963;
+  const radius = 48 + (id % 3) * 9;
+  return { dx: Math.cos(angle) * radius, dy: Math.sin(angle) * radius };
+}
+
+/**
+ * Ring of faint satellite dots around a node, standing in for the many
+ * distinct spoofed addresses a flood is coming from. Without this the
+ * diagram's single "clients" circle makes a distributed attack look like
+ * one machine sending a lot of traffic.
+ */
+function AttackSwarm({ cx, cy, radius = 34 }: { cx: number; cy: number; radius?: number }) {
+  const dots = Array.from({ length: 10 }, (_, i) => {
+    const angle = (i / 10) * Math.PI * 2;
+    return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+  });
+  return (
+    <>
+      {dots.map((d, i) => (
+        <circle key={i} cx={d.x} cy={d.y} r={2.5} fill="var(--status-down)" opacity={0.35} />
+      ))}
+    </>
+  );
+}
 
 /** Rejection is never one color — where it happened is the whole point. */
 const OUTCOME_COLOR: Record<string, string> = {
@@ -42,16 +73,28 @@ function packetPosition(
 ): { x: number; y: number; color: string; opacity: number } {
   const t = Math.min(1, Math.max(0, (now - req.phaseStart) / req.phaseDuration));
   const eased = easeOutCubic(t);
+  // Attack traffic is red the whole way through, not just outlined at the
+  // end — legitimate requests stay cyan so the flood is visible in flight.
+  const transitColor = req.isDdos ? "var(--status-down)" : "var(--status-active)";
 
   switch (req.phase) {
     case "to-limiter":
-      return { x: lerp(CLIENT.x, LIMITER.x, eased), y: lerp(CLIENT.y, LIMITER.y, eased), color: "var(--status-active)", opacity: 1 };
+      return { x: lerp(CLIENT.x, LIMITER.x, eased), y: lerp(CLIENT.y, LIMITER.y, eased), color: transitColor, opacity: 1 };
     case "to-global":
-      return { x: lerp(LIMITER.x, GLOBAL.x, eased), y: lerp(LIMITER.y, GLOBAL.y, eased), color: "var(--status-active)", opacity: 1 };
+      return { x: lerp(LIMITER.x, GLOBAL.x, eased), y: lerp(LIMITER.y, GLOBAL.y, eased), color: transitColor, opacity: 1 };
     case "to-api": {
-      // Only routes through the global node when that limiter is on the path.
-      const from = globalActive ? GLOBAL : LIMITER;
-      return { x: lerp(from.x, API.x, eased), y: lerp(from.y, API.y, eased), color: "var(--status-active)", opacity: 1 };
+      // Slowloris never touches either limiter — it goes straight from the
+      // client to the API's raw connection handling. Everything else only
+      // routes through the global node when that limiter is on the path.
+      const from = req.attackKind === "slowloris" ? CLIENT : globalActive ? GLOBAL : LIMITER;
+      return { x: lerp(from.x, API.x, eased), y: lerp(from.y, API.y, eased), color: transitColor, opacity: 1 };
+    }
+    case "held": {
+      // Parked at the API, not moving — it's an open connection being held,
+      // not a request in flight. Scattered around the node so the count of
+      // simultaneously-held connections is visible at a glance.
+      const { dx, dy } = heldOffset(req.id);
+      return { x: API.x + dx, y: API.y + dy, color: "var(--status-down)", opacity: 0.85 };
     }
     case "returning": {
       // Bounces back from whichever node actually produced the outcome —
@@ -86,6 +129,11 @@ export function RateLimiterDiagram({
   throttled,
   globalTokens,
   globalCapacity,
+  blockedPackets,
+  slowlorisHeld,
+  slowlorisCapacity,
+  activeAttack,
+  attackSourceCount,
 }: {
   algorithm: string;
   allowed: number;
@@ -97,7 +145,14 @@ export function RateLimiterDiagram({
   throttled: number;
   globalTokens: number;
   globalCapacity: number;
+  blockedPackets: BlockedPacket[];
+  slowlorisHeld: number;
+  slowlorisCapacity: number;
+  activeAttack: AttackType | null;
+  attackSourceCount: number;
 }) {
+  const attackAtClient = activeAttack === "http-flood" || activeAttack === "slowloris";
+  const attackAtNetworkEdge = activeAttack === "syn-flood" || activeAttack === "udp-amplification";
   return (
     <svg
       viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
@@ -116,12 +171,68 @@ export function RateLimiterDiagram({
         <line x1={LIMITER.x} y1={LIMITER.y} x2={API.x} y2={API.y} stroke="var(--border-strong)" strokeWidth={1.5} />
       )}
 
-      {/* Client node */}
+      {/* Network edge — where SYN floods / UDP amplification die before ever becoming an HTTP request */}
+      <line
+        x1={NETWORK_EDGE.x}
+        y1={NETWORK_EDGE.y}
+        x2={CLIENT.x - 22}
+        y2={CLIENT.y}
+        stroke="var(--border-strong)"
+        strokeWidth={1}
+        strokeDasharray="3 3"
+      />
+      <text x={NETWORK_EDGE.x} y={NETWORK_EDGE.y - 30} textAnchor="middle" className="fill-text-faint" fontSize={9}>
+        network
+      </text>
+      {attackAtNetworkEdge && (
+        <>
+          <AttackSwarm cx={NETWORK_EDGE.x} cy={NETWORK_EDGE.y} radius={14} />
+          <text
+            x={NETWORK_EDGE.x}
+            y={NETWORK_EDGE.y + 58}
+            textAnchor="middle"
+            className="fill-status-down font-mono"
+            fontSize={9}
+          >
+            {attackSourceCount} src IPs
+          </text>
+        </>
+      )}
+      {blockedPackets.map((b) => {
+        const age = now - b.spawnTime;
+        const t = Math.min(1, Math.max(0, age / BLOCKED_LIFETIME_MS));
+        const opacity = 1 - t;
+        const jitter = ((b.id * 37) % 70) - 35;
+        const y = NETWORK_EDGE.y + jitter;
+        const size = 5;
+        return (
+          <g key={b.id} opacity={opacity} stroke="var(--status-down)" strokeWidth={2} strokeLinecap="round">
+            <line x1={NETWORK_EDGE.x - size} y1={y - size} x2={NETWORK_EDGE.x + size} y2={y + size} />
+            <line x1={NETWORK_EDGE.x - size} y1={y + size} x2={NETWORK_EDGE.x + size} y2={y - size} />
+          </g>
+        );
+      })}
+
+      {/* Client node — one circle stands in for many machines, so an active
+          flood gets a ring of satellite dots plus a distinct-source count to
+          make the spoofing visible instead of implying a single caller. */}
+      {attackAtClient && <AttackSwarm cx={CLIENT.x} cy={CLIENT.y} />}
       <g>
-        <circle cx={CLIENT.x} cy={CLIENT.y} r={22} fill="var(--panel-raised)" stroke="var(--border-strong)" />
+        <circle
+          cx={CLIENT.x}
+          cy={CLIENT.y}
+          r={22}
+          fill="var(--panel-raised)"
+          stroke={attackAtClient ? "var(--status-down)" : "var(--border-strong)"}
+        />
         <text x={CLIENT.x} y={CLIENT.y + 40} textAnchor="middle" className="fill-text-muted" fontSize={11}>
           clients
         </text>
+        {attackAtClient && (
+          <text x={CLIENT.x} y={CLIENT.y + 54} textAnchor="middle" className="fill-status-down font-mono" fontSize={9}>
+            {attackSourceCount} spoofed IPs
+          </text>
+        )}
       </g>
 
       {/* Limiter node */}
@@ -176,22 +287,25 @@ export function RateLimiterDiagram({
       <g>
         <rect
           x={API.x - 63}
-          y={API.y - 37}
+          y={API.y - 44}
           width={126}
-          height={74}
+          height={88}
           rx={12}
           fill="var(--panel-raised)"
           stroke="var(--status-up)"
           strokeWidth={1.5}
         />
-        <text x={API.x} y={API.y - 15} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
+        <text x={API.x} y={API.y - 22} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
           API
         </text>
-        <text x={API.x} y={API.y + 5} textAnchor="middle" className="fill-status-up font-mono" fontSize={9}>
+        <text x={API.x} y={API.y - 2} textAnchor="middle" className="fill-status-up font-mono" fontSize={9}>
           200 × {allowed}
         </text>
-        <text x={API.x} y={API.y + 19} textAnchor="middle" className="fill-status-warn font-mono" fontSize={9}>
+        <text x={API.x} y={API.y + 12} textAnchor="middle" className="fill-status-warn font-mono" fontSize={9}>
           503 × {overloaded}
+        </text>
+        <text x={API.x} y={API.y + 26} textAnchor="middle" className="fill-status-down font-mono" fontSize={9}>
+          held {slowlorisHeld}/{slowlorisCapacity}
         </text>
       </g>
 

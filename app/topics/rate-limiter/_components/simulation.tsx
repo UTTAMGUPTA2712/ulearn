@@ -4,7 +4,7 @@ import { EventLog } from "@/components/simulation/event-log";
 import { StatsBar } from "@/components/simulation/stats-bar";
 
 import { useRateLimiterSimulation } from "../_lib/use-simulation";
-import { AlgorithmSwitch, ClientList, GlobalLimiterConfig, LimiterConfig, TrafficControls } from "./controls";
+import { AlgorithmSwitch, AttackControls, ClientList, GlobalLimiterConfig, LimiterConfig, TrafficControls } from "./controls";
 import { RateLimiterDiagram } from "./diagram";
 
 export function RateLimiterSimulation() {
@@ -15,7 +15,7 @@ export function RateLimiterSimulation() {
     setWindowMs,
     setRefillRate,
     setAutoStream,
-    setDdos,
+    setAttack,
     setGlobalLimiter,
     setGlobalCapacity,
     setGlobalRefillRate,
@@ -29,6 +29,7 @@ export function RateLimiterSimulation() {
     { label: "limited (429)", value: snapshot.stats.limited, color: "var(--status-down)" },
     { label: "throttled (429 global)", value: snapshot.stats.throttled, color: "var(--status-active)" },
     { label: "overloaded (503)", value: snapshot.stats.overloaded, color: "var(--status-warn)" },
+    { label: "blocked (never reaches app)", value: snapshot.stats.blocked, color: "var(--status-down)" },
   ];
 
   return (
@@ -47,6 +48,11 @@ export function RateLimiterSimulation() {
             throttled={snapshot.stats.throttled}
             globalTokens={snapshot.globalTokens}
             globalCapacity={snapshot.globalCapacity}
+            blockedPackets={snapshot.blockedPackets}
+            slowlorisHeld={snapshot.slowlorisHeld}
+            slowlorisCapacity={snapshot.slowlorisCapacity}
+            activeAttack={snapshot.activeAttack}
+            attackSourceCount={snapshot.attackSourceCount}
           />
         </div>
         <ClientList algorithm={snapshot.algorithm} limit={snapshot.limit} clients={snapshot.clients} />
@@ -75,12 +81,11 @@ export function RateLimiterSimulation() {
         <TrafficControls
           autoStream={snapshot.autoStream}
           autoStreamRate={snapshot.autoStreamRate}
-          ddosActive={snapshot.ddosActive}
           onSendOne={sendOne}
           onHammerClient={hammerClient}
           onSetAutoStream={setAutoStream}
-          onSetDdos={setDdos}
         />
+        <AttackControls activeAttack={snapshot.activeAttack} onSetAttack={setAttack} />
       </div>
     </div>
   );

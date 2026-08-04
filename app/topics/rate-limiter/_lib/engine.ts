@@ -1,4 +1,13 @@
-import type { Algorithm, ClientState, LogEntry, RequestPacket, SimSnapshot } from "./types";
+import type {
+  Algorithm,
+  AttackType,
+  BlockedPacket,
+  ClientState,
+  LogEntry,
+  NetworkAttackKind,
+  RequestPacket,
+  SimSnapshot,
+} from "./types";
 
 const TO_LIMITER_MS = 220;
 const TO_GLOBAL_MS = 160;
@@ -8,6 +17,15 @@ const RETURN_MS = 220;
 const LINGER_MS = 260;
 const HAMMER_COUNT = 8;
 const HAMMER_STAGGER_MS = 70;
+
+/** How long a Slowloris connection stays open before it's force-closed and its slot freed. */
+const SLOWLORIS_HOLD_MIN_MS = 3000;
+const SLOWLORIS_HOLD_MAX_MS = 6000;
+const SLOWLORIS_SPAWN_RATE = 4;
+
+/** How long a blocked network-layer packet flashes before disappearing — it never had a real lifecycle. */
+const BLOCKED_LIFETIME_MS = 420;
+const NETWORK_ATTACK_SPAWN_RATE = 55;
 
 /**
  * How many requests the API can have in flight at once. A per-IP limiter
@@ -33,6 +51,7 @@ function randomBetween(min: number, max: number): number {
 
 let requestIdCounter = 0;
 let logIdCounter = 0;
+let blockedIdCounter = 0;
 
 /**
  * Owns the entire simulated world: per-client limiter state, in-flight
@@ -50,11 +69,24 @@ export class RateLimiterEngine {
   windowMs = 4000;
   refillRate = 2;
   requests: RequestPacket[] = [];
+  blockedPackets: BlockedPacket[] = [];
   log: LogEntry[] = [];
-  stats = { sent: 0, allowed: 0, limited: 0, throttled: 0, overloaded: 0 };
+  stats = { sent: 0, allowed: 0, limited: 0, throttled: 0, overloaded: 0, blocked: 0 };
   autoStream = false;
   autoStreamRate = 2;
-  ddosActive = false;
+
+  /** Which attack, if any, is currently running. Only one at a time — see `setAttack`. */
+  activeAttack: AttackType | null = null;
+  /** How many simultaneous slow, incomplete connections the server can hold open before refusing new ones. */
+  slowlorisCapacity = 20;
+  private attackAccumulator = 0;
+  /**
+   * Distinct spoofed source addresses seen in the current attack run. The
+   * diagram has exactly one "clients" node, so without this the flood just
+   * looks like one caller sending a lot of traffic — this is what makes the
+   * "thousands of different machines" part visible.
+   */
+  private attackSourceIds = new Set<string>();
 
   /**
    * Server-wide token bucket sitting between the per-client limiter and the
@@ -117,14 +149,25 @@ export class RateLimiterEngine {
     if (rate !== undefined) this.autoStreamRate = rate;
   }
 
-  setDdos(active: boolean) {
-    this.ddosActive = active;
-    this.addLog(
-      active ? "warn" : "info",
-      active
-        ? "DDoS simulation started — flooding from spoofed source IPs"
-        : "DDoS simulation stopped",
-    );
+  setAttack(attack: AttackType | null) {
+    this.activeAttack = attack;
+    this.attackAccumulator = 0;
+    // Starting a (possibly new) run gets a clean count; stopping leaves the
+    // final tally visible instead of wiping it the instant you hit stop.
+    if (attack) this.attackSourceIds.clear();
+
+    const labels: Record<AttackType, string> = {
+      "http-flood": "HTTP flood — flooding from spoofed source IPs, one complete request each",
+      slowloris: "Slowloris — opening many slow, incomplete connections that never finish a request",
+      "syn-flood": "SYN flood — half-open TCP handshakes; never reaches the HTTP layer at all",
+      "udp-amplification": "UDP amplification — volumetric traffic saturating bandwidth upstream of this server",
+    };
+
+    if (attack) {
+      this.addLog("warn", `Attack started: ${labels[attack]}`);
+    } else {
+      this.addLog("info", "Attack simulation stopped");
+    }
   }
 
   setGlobalLimiter(active: boolean) {
@@ -152,15 +195,38 @@ export class RateLimiterEngine {
     this.globalTokens = Math.min(this.globalCapacity, this.globalTokens + elapsedSec * this.globalRefillRate);
   }
 
-  spawnRequest(opts?: { isDdos?: boolean; clientId?: string }) {
+  spawnRequest(opts?: { isDdos?: boolean; clientId?: string; attackKind?: "http-flood" | "slowloris" }) {
     if (this.requests.length >= MAX_VISIBLE_REQUESTS) return;
 
     const isDdos = opts?.isDdos ?? false;
+    const attackKind = opts?.attackKind;
     const clientId =
       opts?.clientId ??
-      (isDdos
-        ? `203.0.113.${Math.floor(Math.random() * 254) + 1}`
-        : REGULAR_CLIENTS[Math.floor(Math.random() * REGULAR_CLIENTS.length)]);
+      (attackKind === "slowloris"
+        ? `198.51.100.${Math.floor(Math.random() * 254) + 1}`
+        : isDdos
+          ? `203.0.113.${Math.floor(Math.random() * 254) + 1}`
+          : REGULAR_CLIENTS[Math.floor(Math.random() * REGULAR_CLIENTS.length)]);
+
+    if (isDdos) this.attackSourceIds.add(clientId);
+
+    if (attackKind === "slowloris") {
+      // Never sends a complete request, so it has nothing for the per-client
+      // or global limiter to count — it goes straight at the API's raw
+      // connection handling instead. See `resolveSlowlorisArrival`.
+      this.requests.push({
+        id: requestIdCounter++,
+        clientId,
+        phase: "to-api",
+        phaseStart: this.now,
+        phaseDuration: randomBetween(TO_API_MIN_MS, TO_API_MAX_MS),
+        outcome: null,
+        isDdos: true,
+        attackKind,
+      });
+      this.stats.sent++;
+      return;
+    }
 
     this.requests.push({
       id: requestIdCounter++,
@@ -170,8 +236,24 @@ export class RateLimiterEngine {
       phaseDuration: TO_LIMITER_MS,
       outcome: null,
       isDdos,
+      attackKind,
     });
     this.stats.sent++;
+  }
+
+  /**
+   * Network/protocol-layer attack traffic (SYN flood, UDP amplification)
+   * never becomes an HTTP request — there's nothing for an app-layer rate
+   * limiter to see. Tracked separately from `requests` and rendered flashing
+   * out before the client node, then discarded.
+   */
+  private spawnBlocked(kind: NetworkAttackKind) {
+    if (this.blockedPackets.length >= MAX_VISIBLE_REQUESTS) return;
+    const clientId = `192.0.2.${Math.floor(Math.random() * 254) + 1}`;
+    this.attackSourceIds.add(clientId);
+    this.blockedPackets.push({ id: blockedIdCounter++, kind, spawnTime: this.now, clientId });
+    this.stats.sent++;
+    this.stats.blocked++;
   }
 
   /** Fires a rapid burst from one fixed client, so throttling is easy to see happening to a single caller. */
@@ -331,22 +413,71 @@ export class RateLimiterEngine {
     this.stats.allowed++;
   }
 
+  /**
+   * Slowloris connections skip both limiters entirely (see `spawnRequest`),
+   * so the only thing that can push back on them is the API's raw
+   * connection-slot capacity — a different, much larger pool than
+   * `MAX_CONCURRENT_API`, and one a request-counting limiter never touches.
+   */
+  private resolveSlowlorisArrival(req: RequestPacket) {
+    const held = this.requests.filter((r) => r.phase === "held").length;
+
+    if (held >= this.slowlorisCapacity) {
+      req.outcome = "overloaded";
+      req.phase = "returning";
+      req.phaseStart = this.now;
+      req.phaseDuration = RETURN_MS;
+      this.stats.overloaded++;
+      this.addLog("error", `503 — connection slots exhausted, ${req.clientId} (Slowloris) refused`);
+      return;
+    }
+
+    req.phase = "held";
+    req.phaseStart = this.now;
+    req.phaseDuration = randomBetween(SLOWLORIS_HOLD_MIN_MS, SLOWLORIS_HOLD_MAX_MS);
+  }
+
   tick(deltaMs: number) {
     this.now += deltaMs;
 
     for (const client of this.clients.values()) this.updateClient(client);
     this.refillGlobalTokens();
 
-    if (this.autoStream || this.ddosActive) {
-      // Deliberately high enough to push a tight per-IP limit toward its
-      // organic throttling point on its own.
-      const rate = this.ddosActive ? Math.max(this.autoStreamRate * 10, 40) : this.autoStreamRate;
-      this.spawnAccumulator += (rate * deltaMs) / 1000;
+    if (this.autoStream) {
+      this.spawnAccumulator += (this.autoStreamRate * deltaMs) / 1000;
       while (this.spawnAccumulator >= 1) {
         this.spawnAccumulator -= 1;
-        this.spawnRequest({ isDdos: this.ddosActive });
+        this.spawnRequest();
       }
     }
+
+    if (this.activeAttack === "http-flood") {
+      // Deliberately high enough to push a tight per-IP limit toward its
+      // organic throttling point on its own.
+      const rate = Math.max(this.autoStreamRate * 10, 40);
+      this.attackAccumulator += (rate * deltaMs) / 1000;
+      while (this.attackAccumulator >= 1) {
+        this.attackAccumulator -= 1;
+        this.spawnRequest({ isDdos: true, attackKind: "http-flood" });
+      }
+    } else if (this.activeAttack === "slowloris") {
+      // Each connection ties up a slot for seconds, so it doesn't need a
+      // high spawn rate to exhaust `slowlorisCapacity`.
+      this.attackAccumulator += (SLOWLORIS_SPAWN_RATE * deltaMs) / 1000;
+      while (this.attackAccumulator >= 1) {
+        this.attackAccumulator -= 1;
+        this.spawnRequest({ isDdos: true, attackKind: "slowloris" });
+      }
+    } else if (this.activeAttack === "syn-flood" || this.activeAttack === "udp-amplification") {
+      this.attackAccumulator += (NETWORK_ATTACK_SPAWN_RATE * deltaMs) / 1000;
+      while (this.attackAccumulator >= 1) {
+        this.attackAccumulator -= 1;
+        this.spawnBlocked(this.activeAttack);
+      }
+    }
+
+    const blockedCutoff = this.now - BLOCKED_LIFETIME_MS;
+    this.blockedPackets = this.blockedPackets.filter((b) => b.spawnTime > blockedCutoff);
 
     for (const req of this.requests) {
       if (req.phase === "done") continue;
@@ -362,7 +493,18 @@ export class RateLimiterEngine {
           this.resolveAtGlobal(req);
           break;
         case "to-api":
-          this.finalizeAtApi(req);
+          if (req.attackKind === "slowloris") {
+            this.resolveSlowlorisArrival(req);
+          } else {
+            this.finalizeAtApi(req);
+          }
+          break;
+        case "held":
+          // Timed out and force-closed — no response to bounce back, it just
+          // frees the slot it was holding.
+          req.phase = "done";
+          req.phaseStart = this.now;
+          req.phaseDuration = LINGER_MS;
           break;
         case "returning":
           req.phase = "done";
@@ -390,7 +532,11 @@ export class RateLimiterEngine {
       stats: { ...this.stats },
       autoStream: this.autoStream,
       autoStreamRate: this.autoStreamRate,
-      ddosActive: this.ddosActive,
+      activeAttack: this.activeAttack,
+      attackSourceCount: this.attackSourceIds.size,
+      blockedPackets: this.blockedPackets.map((b) => ({ ...b })),
+      slowlorisHeld: this.requests.filter((r) => r.phase === "held").length,
+      slowlorisCapacity: this.slowlorisCapacity,
       globalLimiterActive: this.globalLimiterActive,
       globalCapacity: this.globalCapacity,
       globalRefillRate: this.globalRefillRate,

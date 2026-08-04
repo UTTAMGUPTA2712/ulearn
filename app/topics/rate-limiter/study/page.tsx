@@ -14,6 +14,7 @@ const SECTIONS = [
   "Throttling algorithms",
   "Keying: who is \"one client\"?",
   "Rate limiting vs. a DDoS",
+  "Not every attack reaches the rate limiter",
 ];
 
 export default function RateLimiterStudyPage() {
@@ -89,10 +90,13 @@ export default function RateLimiterStudyPage() {
             load balancer keeps spreading a flood evenly across healthy backends right up
             until they all fall over. A rate limiter keyed by IP keeps every individual
             spoofed address under its limit while the aggregate request rate still floods
-            the backend — run &ldquo;Simulate DDoS&rdquo; and watch the limiter&apos;s{" "}
-            <code>429</code> count barely move while the API&apos;s <code>503</code> count
-            climbs instead: the limiter waved every spoofed address through individually,
-            and the backend paid for it.
+            the backend — run the <strong>HTTP Flood</strong> attack and watch the
+            limiter&apos;s <code>429</code> count barely move while the API&apos;s{" "}
+            <code>503</code> count climbs instead: the limiter waved every spoofed address
+            through individually, and the backend paid for it. Notice the client node itself
+            during the run, too — it sprouts a ring of satellite dots and a distinct-IP
+            counter, because the flood isn&apos;t one machine sending a lot of traffic, it&apos;s
+            thousands of different ones, each looking like a legitimate first-time caller.
           </p>
           <p>
             Now turn on the <strong>server-wide limiter</strong> and run the same flood
@@ -106,6 +110,35 @@ export default function RateLimiterStudyPage() {
             idea with something further upstream too — CDN or edge-level filtering, IP
             reputation, and challenge/CAPTCHA gating — rather than expecting any one
             mechanism to carry the whole load.
+          </p>
+        </Section>
+
+        <Section title="Not every attack reaches the rate limiter">
+          <p>
+            &ldquo;DDoS&rdquo; is not one attack, and the four options in the simulator split
+            cleanly into two groups. HTTP Flood and Slowloris are application-layer attacks —
+            real traffic arriving over HTTP, visible in this diagram, putting load on this
+            API. SYN Flood and UDP Amplification operate below that: run either one and watch
+            the packets flash and disappear at the dashed &ldquo;network&rdquo; edge, left of
+            the client node — they never enter the pipeline at all, because there&apos;s no
+            HTTP request for a rate limiter to inspect in the first place. A SYN flood never
+            finishes the TCP handshake; UDP amplification just reflects volume off third-party
+            servers to saturate your bandwidth. Both are stopped upstream, if at all — by the
+            OS network stack (SYN cookies), a firewall, or a CDN scrubbing traffic before it
+            reaches you — not by anything an application can configure.
+          </p>
+          <p>
+            Slowloris is the more interesting case precisely because it{" "}
+            <em>does</em> reach the app layer but still slips past both limiters here. It
+            never sends a complete request, so a limiter that counts completed requests has
+            nothing to count — run it and watch it skip straight past the{" "}
+            <code>Rate limiter</code> and <code>Server limiter</code> nodes entirely, heading
+            for the API&apos;s <code>held</code> connection-slot gauge instead. Enough
+            simultaneous slow connections exhaust that pool just as effectively as a flood
+            exhausts request-processing capacity, and no amount of per-request rate-limit
+            tuning touches it — the actual fix is a connection or header-read timeout that
+            kills a socket that&apos;s stalled too long, a different mechanism for a different
+            resource.
           </p>
         </Section>
 
