@@ -1,6 +1,7 @@
 import type { Algorithm, ClientState, LogEntry, RequestPacket, SimSnapshot } from "./types";
 
 const TO_LIMITER_MS = 220;
+const TO_GLOBAL_MS = 160;
 const TO_API_MIN_MS = 380;
 const TO_API_MAX_MS = 540;
 const RETURN_MS = 220;
@@ -50,10 +51,22 @@ export class RateLimiterEngine {
   refillRate = 2;
   requests: RequestPacket[] = [];
   log: LogEntry[] = [];
-  stats = { sent: 0, allowed: 0, limited: 0, overloaded: 0 };
+  stats = { sent: 0, allowed: 0, limited: 0, throttled: 0, overloaded: 0 };
   autoStream = false;
   autoStreamRate = 2;
   ddosActive = false;
+
+  /**
+   * Server-wide token bucket sitting between the per-client limiter and the
+   * API. Per-client limiting alone can't see a distributed flood — every
+   * spoofed IP looks like a fresh caller with a full quota — so this is what
+   * actually protects the API's shared capacity once a DDoS run is active.
+   */
+  globalLimiterActive = false;
+  globalCapacity = 12;
+  globalRefillRate = 12;
+  private globalTokens = this.globalCapacity;
+  private lastGlobalRefill = 0;
 
   private clients = new Map<string, ClientState>();
   private spawnAccumulator = 0;
@@ -112,6 +125,31 @@ export class RateLimiterEngine {
         ? "DDoS simulation started — flooding from spoofed source IPs"
         : "DDoS simulation stopped",
     );
+  }
+
+  setGlobalLimiter(active: boolean) {
+    this.globalLimiterActive = active;
+    if (active) this.globalTokens = this.globalCapacity;
+    this.addLog(
+      active ? "info" : "warn",
+      active
+        ? "Server-wide limiter enabled — throttling aggregate traffic before it reaches the API"
+        : "Server-wide limiter disabled",
+    );
+  }
+
+  setGlobalCapacity(capacity: number) {
+    this.globalCapacity = Math.max(1, Math.min(50, capacity));
+  }
+
+  setGlobalRefillRate(rate: number) {
+    this.globalRefillRate = Math.max(1, Math.min(60, rate));
+  }
+
+  private refillGlobalTokens() {
+    const elapsedSec = (this.now - this.lastGlobalRefill) / 1000;
+    this.lastGlobalRefill = this.now;
+    this.globalTokens = Math.min(this.globalCapacity, this.globalTokens + elapsedSec * this.globalRefillRate);
   }
 
   spawnRequest(opts?: { isDdos?: boolean; clientId?: string }) {
@@ -225,10 +263,16 @@ export class RateLimiterEngine {
     if (allowed) {
       client.allowed++;
       req.outcome = "allowed";
-      req.phase = "to-api";
-      req.phaseStart = this.now;
-      req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
-      // Final outcome (success vs. API overload) is decided on arrival — see finalizeAtApi.
+      if (this.globalLimiterActive) {
+        req.phase = "to-global";
+        req.phaseStart = this.now;
+        req.phaseDuration = TO_GLOBAL_MS;
+      } else {
+        req.phase = "to-api";
+        req.phaseStart = this.now;
+        req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
+      }
+      // Final outcome (success vs. throttled vs. API overload) is decided further downstream.
     } else {
       client.limited++;
       req.outcome = "limited";
@@ -239,6 +283,31 @@ export class RateLimiterEngine {
       const tag = req.isDdos ? `${req.clientId} (flood)` : req.clientId;
       this.addLog("warn", `429 — ${tag} rate-limited`);
     }
+  }
+
+  /**
+   * The server-wide checkpoint: unlike the per-client limiter, this bucket is
+   * shared across every client and spoofed IP, so a distributed flood can't
+   * dodge it by rotating source addresses.
+   */
+  private resolveAtGlobal(req: RequestPacket) {
+    this.refillGlobalTokens();
+
+    if (this.globalTokens >= 1) {
+      this.globalTokens -= 1;
+      req.phase = "to-api";
+      req.phaseStart = this.now;
+      req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
+      return;
+    }
+
+    req.outcome = "throttled";
+    req.phase = "returning";
+    req.phaseStart = this.now;
+    req.phaseDuration = RETURN_MS;
+    this.stats.throttled++;
+    const tag = req.isDdos ? `${req.clientId} (flood)` : req.clientId;
+    this.addLog("warn", `429 — ${tag} throttled by server-wide limiter`);
   }
 
   private finalizeAtApi(req: RequestPacket) {
@@ -266,6 +335,7 @@ export class RateLimiterEngine {
     this.now += deltaMs;
 
     for (const client of this.clients.values()) this.updateClient(client);
+    this.refillGlobalTokens();
 
     if (this.autoStream || this.ddosActive) {
       // Deliberately high enough to push a tight per-IP limit toward its
@@ -287,6 +357,9 @@ export class RateLimiterEngine {
       switch (req.phase) {
         case "to-limiter":
           this.resolveAtLimiter(req);
+          break;
+        case "to-global":
+          this.resolveAtGlobal(req);
           break;
         case "to-api":
           this.finalizeAtApi(req);
@@ -318,6 +391,10 @@ export class RateLimiterEngine {
       autoStream: this.autoStream,
       autoStreamRate: this.autoStreamRate,
       ddosActive: this.ddosActive,
+      globalLimiterActive: this.globalLimiterActive,
+      globalCapacity: this.globalCapacity,
+      globalRefillRate: this.globalRefillRate,
+      globalTokens: this.globalTokens,
     };
   }
 }

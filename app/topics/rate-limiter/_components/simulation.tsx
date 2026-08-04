@@ -4,7 +4,7 @@ import { EventLog } from "@/components/simulation/event-log";
 import { StatsBar } from "@/components/simulation/stats-bar";
 
 import { useRateLimiterSimulation } from "../_lib/use-simulation";
-import { AlgorithmSwitch, ClientList, LimiterConfig, TrafficControls } from "./controls";
+import { AlgorithmSwitch, ClientList, GlobalLimiterConfig, LimiterConfig, TrafficControls } from "./controls";
 import { RateLimiterDiagram } from "./diagram";
 
 export function RateLimiterSimulation() {
@@ -16,6 +16,9 @@ export function RateLimiterSimulation() {
     setRefillRate,
     setAutoStream,
     setDdos,
+    setGlobalLimiter,
+    setGlobalCapacity,
+    setGlobalRefillRate,
     sendOne,
     hammerClient,
   } = useRateLimiterSimulation();
@@ -24,6 +27,7 @@ export function RateLimiterSimulation() {
     { label: "sent", value: snapshot.stats.sent },
     { label: "allowed", value: snapshot.stats.allowed, color: "var(--status-up)" },
     { label: "limited (429)", value: snapshot.stats.limited, color: "var(--status-down)" },
+    { label: "throttled (429 global)", value: snapshot.stats.throttled, color: "var(--status-active)" },
     { label: "overloaded (503)", value: snapshot.stats.overloaded, color: "var(--status-warn)" },
   ];
 
@@ -39,6 +43,10 @@ export function RateLimiterSimulation() {
             overloaded={snapshot.stats.overloaded}
             requests={snapshot.requests}
             now={snapshot.now}
+            globalLimiterActive={snapshot.globalLimiterActive}
+            throttled={snapshot.stats.throttled}
+            globalTokens={snapshot.globalTokens}
+            globalCapacity={snapshot.globalCapacity}
           />
         </div>
         <ClientList algorithm={snapshot.algorithm} limit={snapshot.limit} clients={snapshot.clients} />
@@ -55,6 +63,14 @@ export function RateLimiterSimulation() {
           onSetLimit={setLimit}
           onSetWindowMs={setWindowMs}
           onSetRefillRate={setRefillRate}
+        />
+        <GlobalLimiterConfig
+          active={snapshot.globalLimiterActive}
+          capacity={snapshot.globalCapacity}
+          refillRate={snapshot.globalRefillRate}
+          onSetActive={setGlobalLimiter}
+          onSetCapacity={setGlobalCapacity}
+          onSetRefillRate={setGlobalRefillRate}
         />
         <TrafficControls
           autoStream={snapshot.autoStream}

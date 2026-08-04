@@ -92,9 +92,20 @@ export default function RateLimiterStudyPage() {
             the backend — run &ldquo;Simulate DDoS&rdquo; and watch the limiter&apos;s{" "}
             <code>429</code> count barely move while the API&apos;s <code>503</code> count
             climbs instead: the limiter waved every spoofed address through individually,
-            and the backend paid for it. Real defenses combine both with something upstream
-            of either — CDN or edge-level filtering, IP reputation, and challenge/CAPTCHA
-            gating — rather than expecting one mechanism to carry the whole load.
+            and the backend paid for it.
+          </p>
+          <p>
+            Now turn on the <strong>server-wide limiter</strong> and run the same flood
+            again. It sits behind the per-client limiter and shares one bucket across every
+            client and spoofed address combined, so rotating source IPs no longer buys the
+            attacker anything — the aggregate rate hits a wall regardless of how many
+            identities it&apos;s spread across. Watch the new node&apos;s own{" "}
+            <code>429</code> count climb instead of the API&apos;s <code>503</code>s: traffic
+            gets throttled deliberately, before the backend is ever put at risk, rather than
+            dropped after the fact by running out of capacity. Real systems layer this same
+            idea with something further upstream too — CDN or edge-level filtering, IP
+            reputation, and challenge/CAPTCHA gating — rather than expecting any one
+            mechanism to carry the whole load.
           </p>
         </Section>
 

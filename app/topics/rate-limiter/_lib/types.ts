@@ -22,8 +22,8 @@ export interface ClientState {
   limited: number;
 }
 
-export type RequestOutcome = "allowed" | "limited" | "overloaded";
-export type RequestPhase = "to-limiter" | "to-api" | "returning" | "done";
+export type RequestOutcome = "allowed" | "limited" | "throttled" | "overloaded";
+export type RequestPhase = "to-limiter" | "to-global" | "to-api" | "returning" | "done";
 
 export interface RequestPacket {
   id: number;
@@ -46,7 +46,9 @@ export interface Stats {
   sent: number;
   allowed: number;
   limited: number;
-  /** Passed the per-client limiter but got dropped because the API itself was saturated — see `MAX_CONCURRENT_API`. */
+  /** Rejected by the server-wide limiter — see `globalLimiterActive`. Distinct from `limited`, which is per-client. */
+  throttled: number;
+  /** Passed every limiter but got dropped because the API itself was saturated — see `MAX_CONCURRENT_API`. */
   overloaded: number;
 }
 
@@ -63,4 +65,9 @@ export interface SimSnapshot {
   autoStream: boolean;
   autoStreamRate: number;
   ddosActive: boolean;
+  /** Whether the server-wide limiter sits between the per-client limiter and the API. */
+  globalLimiterActive: boolean;
+  globalCapacity: number;
+  globalRefillRate: number;
+  globalTokens: number;
 }

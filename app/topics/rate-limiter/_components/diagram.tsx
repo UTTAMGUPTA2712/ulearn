@@ -3,15 +3,29 @@ import type { RequestPacket } from "../_lib/types";
 const VIEW_W = 720;
 const VIEW_H = 420;
 const CLIENT = { x: 60, y: VIEW_H / 2 };
-const LIMITER = { x: 360, y: VIEW_H / 2 };
-const API = { x: 650, y: VIEW_H / 2 };
+const LIMITER = { x: 330, y: VIEW_H / 2 };
+const GLOBAL = { x: 505, y: VIEW_H / 2 };
+const API = { x: 655, y: VIEW_H / 2 };
 
 /** Rejection is never one color — where it happened is the whole point. */
 const OUTCOME_COLOR: Record<string, string> = {
   limited: "var(--status-down)",
+  throttled: "var(--status-active)",
   overloaded: "var(--status-warn)",
   allowed: "var(--status-up)",
 };
+
+/** Where a "returning" packet bounced from — the node that produced its outcome. */
+function returnOrigin(outcome: string | null) {
+  switch (outcome) {
+    case "limited":
+      return LIMITER;
+    case "throttled":
+      return GLOBAL;
+    default:
+      return API; // overloaded or allowed both make it all the way to the API
+  }
+}
 
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3);
@@ -21,19 +35,28 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function packetPosition(req: RequestPacket, now: number): { x: number; y: number; color: string; opacity: number } {
+function packetPosition(
+  req: RequestPacket,
+  now: number,
+  globalActive: boolean,
+): { x: number; y: number; color: string; opacity: number } {
   const t = Math.min(1, Math.max(0, (now - req.phaseStart) / req.phaseDuration));
   const eased = easeOutCubic(t);
 
   switch (req.phase) {
     case "to-limiter":
       return { x: lerp(CLIENT.x, LIMITER.x, eased), y: lerp(CLIENT.y, LIMITER.y, eased), color: "var(--status-active)", opacity: 1 };
-    case "to-api":
-      return { x: lerp(LIMITER.x, API.x, eased), y: lerp(LIMITER.y, API.y, eased), color: "var(--status-active)", opacity: 1 };
+    case "to-global":
+      return { x: lerp(LIMITER.x, GLOBAL.x, eased), y: lerp(LIMITER.y, GLOBAL.y, eased), color: "var(--status-active)", opacity: 1 };
+    case "to-api": {
+      // Only routes through the global node when that limiter is on the path.
+      const from = globalActive ? GLOBAL : LIMITER;
+      return { x: lerp(from.x, API.x, eased), y: lerp(from.y, API.y, eased), color: "var(--status-active)", opacity: 1 };
+    }
     case "returning": {
-      // Limited packets never reached the API — they bounce back from the limiter.
-      // Overloaded ones got all the way there before the API dropped them.
-      const origin = req.outcome === "limited" ? LIMITER : API;
+      // Bounces back from whichever node actually produced the outcome —
+      // limiter, global checkpoint, or the API itself.
+      const origin = returnOrigin(req.outcome);
       const color = OUTCOME_COLOR[req.outcome ?? "allowed"];
       return { x: lerp(origin.x, CLIENT.x, eased), y: lerp(origin.y, CLIENT.y, eased), color, opacity: 1 };
     }
@@ -59,6 +82,10 @@ export function RateLimiterDiagram({
   overloaded,
   requests,
   now,
+  globalLimiterActive,
+  throttled,
+  globalTokens,
+  globalCapacity,
 }: {
   algorithm: string;
   allowed: number;
@@ -66,6 +93,10 @@ export function RateLimiterDiagram({
   overloaded: number;
   requests: RequestPacket[];
   now: number;
+  globalLimiterActive: boolean;
+  throttled: number;
+  globalTokens: number;
+  globalCapacity: number;
 }) {
   return (
     <svg
@@ -76,7 +107,14 @@ export function RateLimiterDiagram({
     >
       {/* Static topology lines */}
       <line x1={CLIENT.x} y1={CLIENT.y} x2={LIMITER.x} y2={LIMITER.y} stroke="var(--border-strong)" strokeWidth={1.5} />
-      <line x1={LIMITER.x} y1={LIMITER.y} x2={API.x} y2={API.y} stroke="var(--border-strong)" strokeWidth={1.5} />
+      {globalLimiterActive ? (
+        <>
+          <line x1={LIMITER.x} y1={LIMITER.y} x2={GLOBAL.x} y2={GLOBAL.y} stroke="var(--border-strong)" strokeWidth={1.5} />
+          <line x1={GLOBAL.x} y1={GLOBAL.y} x2={API.x} y2={API.y} stroke="var(--border-strong)" strokeWidth={1.5} />
+        </>
+      ) : (
+        <line x1={LIMITER.x} y1={LIMITER.y} x2={API.x} y2={API.y} stroke="var(--border-strong)" strokeWidth={1.5} />
+      )}
 
       {/* Client node */}
       <g>
@@ -109,6 +147,31 @@ export function RateLimiterDiagram({
         </text>
       </g>
 
+      {/* Global (server-wide) limiter node — only on the path when enabled */}
+      {globalLimiterActive && (
+        <g>
+          <rect
+            x={GLOBAL.x - 60}
+            y={GLOBAL.y - 34}
+            width={120}
+            height={68}
+            rx={14}
+            fill="var(--panel-raised)"
+            stroke="var(--status-active)"
+            strokeWidth={1.5}
+          />
+          <text x={GLOBAL.x} y={GLOBAL.y - 8} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
+            Server limiter
+          </text>
+          <text x={GLOBAL.x} y={GLOBAL.y + 12} textAnchor="middle" className="fill-status-active font-mono" fontSize={9}>
+            {globalTokens.toFixed(0)}/{globalCapacity} tokens
+          </text>
+          <text x={GLOBAL.x} y={GLOBAL.y + 26} textAnchor="middle" className="fill-status-active font-mono" fontSize={9}>
+            429 × {throttled}
+          </text>
+        </g>
+      )}
+
       {/* API node */}
       <g>
         <rect
@@ -134,7 +197,7 @@ export function RateLimiterDiagram({
 
       {/* In-flight request packets */}
       {requests.map((req) => {
-        const p = packetPosition(req, now);
+        const p = packetPosition(req, now, globalLimiterActive);
         return (
           <circle
             key={req.id}

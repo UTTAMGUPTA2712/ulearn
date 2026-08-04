@@ -163,6 +163,61 @@ export function TrafficControls({
   );
 }
 
+export function GlobalLimiterConfig({
+  active,
+  capacity,
+  refillRate,
+  onSetActive,
+  onSetCapacity,
+  onSetRefillRate,
+}: {
+  active: boolean;
+  capacity: number;
+  refillRate: number;
+  onSetActive: (active: boolean) => void;
+  onSetCapacity: (capacity: number) => void;
+  onSetRefillRate: (rate: number) => void;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Server-wide limiter</p>
+      <div className="mt-2 space-y-2.5 rounded-xl border border-border bg-panel p-3">
+        <Button active={active} onClick={() => onSetActive(!active)} className="w-full">
+          {active ? "Disable server-wide limit" : "Enable server-wide limit"}
+        </Button>
+        {active && (
+          <>
+            <label className="flex items-center gap-2 text-[11px] text-text-muted">
+              burst capacity
+              <input
+                type="range"
+                min={1}
+                max={50}
+                value={capacity}
+                onChange={(e) => onSetCapacity(Number(e.target.value))}
+                className="min-w-0 flex-1 accent-accent"
+              />
+              <span className="w-6 shrink-0 text-right font-mono">{capacity}</span>
+            </label>
+            <label className="flex items-center gap-2 text-[11px] text-text-muted">
+              sustained rate
+              <input
+                type="range"
+                min={1}
+                max={60}
+                value={refillRate}
+                onChange={(e) => onSetRefillRate(Number(e.target.value))}
+                className="min-w-0 flex-1 accent-accent"
+              />
+              <span className="w-10 shrink-0 text-right font-mono">{refillRate}/s</span>
+            </label>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ClientList({
   algorithm,
   limit,

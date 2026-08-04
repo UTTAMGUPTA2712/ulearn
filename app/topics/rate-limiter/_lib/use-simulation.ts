@@ -41,6 +41,9 @@ export function useRateLimiterSimulation() {
     setRefillRate: (rate: number) => engine.setRefillRate(rate),
     setAutoStream: (enabled: boolean, rate?: number) => engine.setAutoStream(enabled, rate),
     setDdos: (active: boolean) => engine.setDdos(active),
+    setGlobalLimiter: (active: boolean) => engine.setGlobalLimiter(active),
+    setGlobalCapacity: (capacity: number) => engine.setGlobalCapacity(capacity),
+    setGlobalRefillRate: (rate: number) => engine.setGlobalRefillRate(rate),
     sendOne: () => engine.spawnRequest(),
     hammerClient: () => engine.hammerClient(),
   };
