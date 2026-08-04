@@ -19,7 +19,15 @@ export const topics: readonly Topic[] = [
     slug: "load-balancer",
     title: "Load Balancer",
     tagline:
-      "Round robin, least connections, weighted and IP-hash routing — watch requests get distributed and rerouted live as backends fail.",
+      "Round robin, least connections, weighted, IP-hash, URL-hash and random routing — watch requests get distributed and rerouted live as backends fail.",
+    category: "Traffic & Routing",
+    status: "available",
+  },
+  {
+    slug: "rate-limiter",
+    title: "Rate Limiter",
+    tagline:
+      "Fixed window, sliding window, token bucket and leaky bucket throttling — hammer one client, then flood from thousands of spoofed IPs and watch per-client limits stop helping.",
     category: "Traffic & Routing",
     status: "available",
   },

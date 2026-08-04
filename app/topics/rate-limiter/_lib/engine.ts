@@ -1,0 +1,298 @@
+import type { Algorithm, ClientState, LogEntry, RequestPacket, SimSnapshot } from "./types";
+
+const TO_LIMITER_MS = 220;
+const TO_API_MIN_MS = 380;
+const TO_API_MAX_MS = 540;
+const RETURN_MS = 220;
+const LINGER_MS = 260;
+const HAMMER_COUNT = 8;
+const HAMMER_STAGGER_MS = 70;
+
+/** Safety valve so a DDoS demo can't grow the packet array without bound. */
+const MAX_VISIBLE_REQUESTS = 70;
+const MAX_LOG_LINES = 60;
+
+const REGULAR_CLIENTS = ["10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5", "10.0.0.6", "10.0.0.7"];
+/** The one client the "Hammer" button targets, so its throttling is easy to follow. */
+const HAMMER_TARGET = REGULAR_CLIENTS[0];
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+let requestIdCounter = 0;
+let logIdCounter = 0;
+
+/**
+ * Owns the entire simulated world: per-client limiter state, in-flight
+ * requests, the active algorithm and a short event log. Mutated in place on
+ * every `tick()` — `getSnapshot()` is the only thing that leaves the engine.
+ *
+ * Spoofed DDoS clients are deliberately never persisted into `clients` (see
+ * `resolveAtLimiter`) — each one gets a fresh, full quota, which is exactly
+ * the failure mode a per-IP limiter has against a distributed flood.
+ */
+export class RateLimiterEngine {
+  now = 0;
+  algorithm: Algorithm = "fixed-window";
+  limit = 5;
+  windowMs = 4000;
+  refillRate = 2;
+  requests: RequestPacket[] = [];
+  log: LogEntry[] = [];
+  stats = { sent: 0, allowed: 0, limited: 0 };
+  autoStream = false;
+  autoStreamRate = 2;
+  ddosActive = false;
+
+  private clients = new Map<string, ClientState>();
+  private spawnAccumulator = 0;
+
+  constructor() {
+    REGULAR_CLIENTS.forEach((id) => this.clients.set(id, this.freshClientState(id)));
+  }
+
+  private freshClientState(clientId: string): ClientState {
+    return {
+      clientId,
+      windowStart: this.now,
+      windowCount: 0,
+      log: [],
+      tokens: this.limit,
+      lastRefill: this.now,
+      level: 0,
+      lastLeak: this.now,
+      allowed: 0,
+      limited: 0,
+    };
+  }
+
+  private addLog(level: LogEntry["level"], message: string) {
+    this.log.push({ id: logIdCounter++, time: this.now, level, message });
+    if (this.log.length > MAX_LOG_LINES) this.log.shift();
+  }
+
+  setAlgorithm(algorithm: Algorithm) {
+    this.algorithm = algorithm;
+    this.addLog("info", `Algorithm switched to ${algorithm}`);
+  }
+
+  setLimit(limit: number) {
+    this.limit = Math.max(1, Math.min(20, limit));
+  }
+
+  setWindowMs(ms: number) {
+    this.windowMs = Math.max(1000, Math.min(10000, ms));
+  }
+
+  setRefillRate(rate: number) {
+    this.refillRate = Math.max(1, Math.min(10, rate));
+  }
+
+  setAutoStream(enabled: boolean, rate?: number) {
+    this.autoStream = enabled;
+    if (rate !== undefined) this.autoStreamRate = rate;
+  }
+
+  setDdos(active: boolean) {
+    this.ddosActive = active;
+    this.addLog(
+      active ? "warn" : "info",
+      active
+        ? "DDoS simulation started — flooding from spoofed source IPs"
+        : "DDoS simulation stopped",
+    );
+  }
+
+  spawnRequest(opts?: { isDdos?: boolean; clientId?: string }) {
+    if (this.requests.length >= MAX_VISIBLE_REQUESTS) return;
+
+    const isDdos = opts?.isDdos ?? false;
+    const clientId =
+      opts?.clientId ??
+      (isDdos
+        ? `203.0.113.${Math.floor(Math.random() * 254) + 1}`
+        : REGULAR_CLIENTS[Math.floor(Math.random() * REGULAR_CLIENTS.length)]);
+
+    this.requests.push({
+      id: requestIdCounter++,
+      clientId,
+      phase: "to-limiter",
+      phaseStart: this.now,
+      phaseDuration: TO_LIMITER_MS,
+      outcome: null,
+      isDdos,
+    });
+    this.stats.sent++;
+  }
+
+  /** Fires a rapid burst from one fixed client, so throttling is easy to see happening to a single caller. */
+  hammerClient() {
+    for (let i = 0; i < HAMMER_COUNT; i++) {
+      if (this.requests.length >= MAX_VISIBLE_REQUESTS) break;
+      this.requests.push({
+        id: requestIdCounter++,
+        clientId: HAMMER_TARGET,
+        phase: "to-limiter",
+        phaseStart: this.now,
+        phaseDuration: TO_LIMITER_MS + i * HAMMER_STAGGER_MS,
+        outcome: null,
+        isDdos: false,
+      });
+      this.stats.sent++;
+    }
+    this.addLog("warn", `Hammering ${HAMMER_TARGET} with ${HAMMER_COUNT} rapid requests`);
+  }
+
+  /** Keeps a client's window/token/leak state current even between requests, so gauges animate live. */
+  private updateClient(client: ClientState) {
+    if (this.now - client.windowStart >= this.windowMs) {
+      client.windowStart = this.now;
+      client.windowCount = 0;
+    }
+
+    const cutoff = this.now - this.windowMs;
+    if (client.log.length > 0 && client.log[0] <= cutoff) {
+      client.log = client.log.filter((t) => t > cutoff);
+    }
+
+    const elapsedRefillSec = (this.now - client.lastRefill) / 1000;
+    client.lastRefill = this.now;
+    client.tokens = Math.min(this.limit, client.tokens + elapsedRefillSec * this.refillRate);
+
+    const elapsedLeakSec = (this.now - client.lastLeak) / 1000;
+    client.lastLeak = this.now;
+    client.level = Math.max(0, client.level - elapsedLeakSec * this.refillRate);
+  }
+
+  private checkLimit(client: ClientState): boolean {
+    switch (this.algorithm) {
+      case "fixed-window": {
+        if (client.windowCount < this.limit) {
+          client.windowCount++;
+          return true;
+        }
+        return false;
+      }
+      case "sliding-window": {
+        if (client.log.length < this.limit) {
+          client.log.push(this.now);
+          return true;
+        }
+        return false;
+      }
+      case "token-bucket": {
+        if (client.tokens >= 1) {
+          client.tokens -= 1;
+          return true;
+        }
+        return false;
+      }
+      case "leaky-bucket": {
+        if (client.level < this.limit) {
+          client.level += 1;
+          return true;
+        }
+        return false;
+      }
+    }
+  }
+
+  private resolveAtLimiter(req: RequestPacket) {
+    // Spoofed DDoS IPs are never persisted — each one is a first-time caller
+    // with a full quota, which is the point being demonstrated.
+    const persist = !req.isDdos;
+    let client = this.clients.get(req.clientId);
+    if (!client) {
+      client = this.freshClientState(req.clientId);
+      if (persist) this.clients.set(req.clientId, client);
+    } else {
+      this.updateClient(client);
+    }
+
+    const allowed = this.checkLimit(client);
+
+    if (allowed) {
+      client.allowed++;
+      req.outcome = "allowed";
+      req.phase = "to-api";
+      req.phaseStart = this.now;
+      req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
+      this.stats.allowed++;
+    } else {
+      client.limited++;
+      req.outcome = "limited";
+      req.phase = "returning";
+      req.phaseStart = this.now;
+      req.phaseDuration = RETURN_MS;
+      this.stats.limited++;
+      const tag = req.isDdos ? `${req.clientId} (flood)` : req.clientId;
+      this.addLog("warn", `429 — ${tag} rate-limited`);
+    }
+  }
+
+  private finalizeAtApi(req: RequestPacket) {
+    req.phase = "returning";
+    req.phaseStart = this.now;
+    req.phaseDuration = RETURN_MS;
+  }
+
+  tick(deltaMs: number) {
+    this.now += deltaMs;
+
+    for (const client of this.clients.values()) this.updateClient(client);
+
+    if (this.autoStream || this.ddosActive) {
+      // Deliberately high enough to push a tight per-IP limit toward its
+      // organic throttling point on its own.
+      const rate = this.ddosActive ? Math.max(this.autoStreamRate * 10, 40) : this.autoStreamRate;
+      this.spawnAccumulator += (rate * deltaMs) / 1000;
+      while (this.spawnAccumulator >= 1) {
+        this.spawnAccumulator -= 1;
+        this.spawnRequest({ isDdos: this.ddosActive });
+      }
+    }
+
+    for (const req of this.requests) {
+      if (req.phase === "done") continue;
+
+      const elapsed = this.now - req.phaseStart;
+      if (elapsed < req.phaseDuration) continue;
+
+      switch (req.phase) {
+        case "to-limiter":
+          this.resolveAtLimiter(req);
+          break;
+        case "to-api":
+          this.finalizeAtApi(req);
+          break;
+        case "returning":
+          req.phase = "done";
+          req.phaseStart = this.now;
+          req.phaseDuration = LINGER_MS;
+          break;
+      }
+    }
+
+    this.requests = this.requests.filter(
+      (r) => !(r.phase === "done" && this.now - r.phaseStart >= r.phaseDuration),
+    );
+  }
+
+  getSnapshot(): SimSnapshot {
+    return {
+      now: this.now,
+      algorithm: this.algorithm,
+      limit: this.limit,
+      windowMs: this.windowMs,
+      refillRate: this.refillRate,
+      requests: this.requests.map((r) => ({ ...r })),
+      clients: REGULAR_CLIENTS.map((id) => ({ ...this.clients.get(id)! })),
+      log: [...this.log],
+      stats: { ...this.stats },
+      autoStream: this.autoStream,
+      autoStreamRate: this.autoStreamRate,
+      ddosActive: this.ddosActive,
+    };
+  }
+}

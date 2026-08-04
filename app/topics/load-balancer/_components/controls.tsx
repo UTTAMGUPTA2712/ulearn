@@ -7,6 +7,8 @@ const ALGORITHMS: { value: Algorithm; label: string }[] = [
   { value: "least-connections", label: "Least connections" },
   { value: "weighted", label: "Weighted" },
   { value: "ip-hash", label: "IP hash" },
+  { value: "url-hash", label: "URL hash" },
+  { value: "random", label: "Random" },
 ];
 
 const FAULTS: { value: Fault; label: string }[] = [

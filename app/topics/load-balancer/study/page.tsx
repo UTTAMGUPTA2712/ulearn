@@ -60,6 +60,20 @@ export default function LoadBalancerStudyPage() {
               failed backend. That reshuffling problem is what consistent
               hashing exists to fix.
             </ConceptCard>
+            <ConceptCard name="URL hash">
+              Same idea as IP hash, but keyed on the requested path instead of
+              the client address — the same URL always lands on the same
+              backend, which is what makes per-backend caching effective. It
+              shares IP hash&apos;s reshuffling problem when the backend pool
+              changes, and it doesn&apos;t give any one client session
+              affinity the way IP hash does.
+            </ConceptCard>
+            <ConceptCard name="Random">
+              Picks a backend uniformly at random for every request, no state
+              kept between picks. Over enough requests it evens out about as
+              well as round robin, but individual bursts can still land
+              unevenly since nothing coordinates one pick with the next.
+            </ConceptCard>
           </div>
         </Section>
 

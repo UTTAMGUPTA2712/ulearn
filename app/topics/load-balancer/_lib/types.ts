@@ -3,7 +3,7 @@
  * on purpose — nothing here is shared with other topics.
  */
 
-export type Algorithm = "round-robin" | "least-connections" | "weighted" | "ip-hash";
+export type Algorithm = "round-robin" | "least-connections" | "weighted" | "ip-hash" | "random" | "url-hash";
 
 export type Fault = "none" | "slow" | "erroring" | "overloaded" | "timeout";
 
@@ -30,6 +30,8 @@ export type RequestPhase = "to-lb" | "to-backend" | "stalled" | "returning" | "d
 export interface RequestPacket {
   id: number;
   clientId: string;
+  /** Requested path — only meaningful for url-hash, but assigned to every request. */
+  path: string;
   algorithm: Algorithm;
   backendId: string | null;
   phase: RequestPhase;

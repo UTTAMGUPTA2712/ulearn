@@ -16,6 +16,7 @@ const AUTO_DOWN_THRESHOLD = 3;
 const MAX_LOG_LINES = 60;
 
 const REGULAR_CLIENTS = ["10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5", "10.0.0.6", "10.0.0.7"];
+const REQUEST_PATHS = ["/home", "/api/users", "/api/orders", "/checkout", "/search", "/static/app.js"];
 
 function hashString(input: string): number {
   let hash = 5381;
@@ -134,6 +135,7 @@ export class LoadBalancerEngine {
     this.requests.push({
       id: requestIdCounter++,
       clientId,
+      path: REQUEST_PATHS[Math.floor(Math.random() * REQUEST_PATHS.length)],
       algorithm: this.algorithm,
       backendId: null,
       phase: "to-lb",
@@ -147,7 +149,7 @@ export class LoadBalancerEngine {
     this.stats.sent++;
   }
 
-  private pickBackend(clientId: string, exclude?: string): Backend | null {
+  private pickBackend(clientId: string, path: string, exclude?: string): Backend | null {
     const eligible = this.backends.filter((b) => b.healthy && b.id !== exclude);
     if (eligible.length === 0) return null;
 
@@ -175,12 +177,19 @@ export class LoadBalancerEngine {
         const sorted = [...eligible].sort((a, b) => a.id.localeCompare(b.id));
         return sorted[hashString(clientId) % sorted.length];
       }
+      case "url-hash": {
+        const sorted = [...eligible].sort((a, b) => a.id.localeCompare(b.id));
+        return sorted[hashString(path) % sorted.length];
+      }
+      case "random": {
+        return eligible[Math.floor(Math.random() * eligible.length)];
+      }
     }
   }
 
   private routeRequest(req: RequestPacket) {
     const excludeId = req.retryCount > 0 ? (req.backendId ?? undefined) : undefined;
-    const backend = this.pickBackend(req.clientId, excludeId);
+    const backend = this.pickBackend(req.clientId, req.path, excludeId);
 
     if (!backend) {
       req.outcome = "rejected";

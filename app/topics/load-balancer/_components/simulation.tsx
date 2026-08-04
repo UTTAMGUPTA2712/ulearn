@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { EventLog } from "@/components/simulation/event-log";
 import { StatsBar } from "@/components/simulation/stats-bar";
 
@@ -10,6 +12,9 @@ import { LoadBalancerDiagram } from "./diagram";
 export function LoadBalancerSimulation() {
   const { snapshot, setAlgorithm, setWeight, toggleHealthy, setFault, setAutoStream, setDdos, sendOne } =
     useLoadBalancerSimulation();
+
+  const allBackendsDown = snapshot.backends.every((b) => !b.healthy);
+  const showRateLimiterCallout = snapshot.ddosActive && allBackendsDown;
 
   const statItems = [
     { label: "sent", value: snapshot.stats.sent },
@@ -22,6 +27,20 @@ export function LoadBalancerSimulation() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="flex flex-col gap-4">
+        {showRateLimiterCallout && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-status-down bg-status-down/10 px-4 py-3 text-sm">
+            <span className="text-text">
+              Every backend is down and the flood keeps coming — a load balancer alone
+              can&apos;t stop this, it can only spread it around.
+            </span>
+            <Link
+              href="/topics/rate-limiter"
+              className="shrink-0 font-medium text-accent hover:underline"
+            >
+              Learn about rate limiter here →
+            </Link>
+          </div>
+        )}
         <StatsBar items={statItems} />
         <div className="h-[420px] shrink-0 rounded-2xl border border-border bg-panel shadow-sm">
           <LoadBalancerDiagram
