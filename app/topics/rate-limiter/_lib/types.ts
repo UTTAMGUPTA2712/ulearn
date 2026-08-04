@@ -22,7 +22,7 @@ export interface ClientState {
   limited: number;
 }
 
-export type RequestOutcome = "allowed" | "limited";
+export type RequestOutcome = "allowed" | "limited" | "overloaded";
 export type RequestPhase = "to-limiter" | "to-api" | "returning" | "done";
 
 export interface RequestPacket {
@@ -46,6 +46,8 @@ export interface Stats {
   sent: number;
   allowed: number;
   limited: number;
+  /** Passed the per-client limiter but got dropped because the API itself was saturated — see `MAX_CONCURRENT_API`. */
+  overloaded: number;
 }
 
 export interface SimSnapshot {

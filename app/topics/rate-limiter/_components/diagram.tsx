@@ -6,6 +6,13 @@ const CLIENT = { x: 60, y: VIEW_H / 2 };
 const LIMITER = { x: 360, y: VIEW_H / 2 };
 const API = { x: 650, y: VIEW_H / 2 };
 
+/** Rejection is never one color — where it happened is the whole point. */
+const OUTCOME_COLOR: Record<string, string> = {
+  limited: "var(--status-down)",
+  overloaded: "var(--status-warn)",
+  allowed: "var(--status-up)",
+};
+
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3);
 }
@@ -24,13 +31,15 @@ function packetPosition(req: RequestPacket, now: number): { x: number; y: number
     case "to-api":
       return { x: lerp(LIMITER.x, API.x, eased), y: lerp(LIMITER.y, API.y, eased), color: "var(--status-active)", opacity: 1 };
     case "returning": {
+      // Limited packets never reached the API — they bounce back from the limiter.
+      // Overloaded ones got all the way there before the API dropped them.
       const origin = req.outcome === "limited" ? LIMITER : API;
-      const color = req.outcome === "limited" ? "var(--status-down)" : "var(--status-up)";
+      const color = OUTCOME_COLOR[req.outcome ?? "allowed"];
       return { x: lerp(origin.x, CLIENT.x, eased), y: lerp(origin.y, CLIENT.y, eased), color, opacity: 1 };
     }
     case "done":
     default: {
-      const color = req.outcome === "limited" ? "var(--status-down)" : "var(--status-up)";
+      const color = OUTCOME_COLOR[req.outcome ?? "allowed"];
       return { x: CLIENT.x, y: CLIENT.y, color, opacity: 1 - t };
     }
   }
@@ -47,12 +56,14 @@ export function RateLimiterDiagram({
   algorithm,
   allowed,
   limited,
+  overloaded,
   requests,
   now,
 }: {
   algorithm: string;
   allowed: number;
   limited: number;
+  overloaded: number;
   requests: RequestPacket[];
   now: number;
 }) {
@@ -101,20 +112,23 @@ export function RateLimiterDiagram({
       {/* API node */}
       <g>
         <rect
-          x={API.x - 56}
-          y={API.y - 30}
-          width={112}
-          height={60}
+          x={API.x - 63}
+          y={API.y - 37}
+          width={126}
+          height={74}
           rx={12}
           fill="var(--panel-raised)"
           stroke="var(--status-up)"
           strokeWidth={1.5}
         />
-        <text x={API.x} y={API.y - 4} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
+        <text x={API.x} y={API.y - 15} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
           API
         </text>
-        <text x={API.x} y={API.y + 16} textAnchor="middle" className="fill-status-up font-mono" fontSize={9}>
+        <text x={API.x} y={API.y + 5} textAnchor="middle" className="fill-status-up font-mono" fontSize={9}>
           200 × {allowed}
+        </text>
+        <text x={API.x} y={API.y + 19} textAnchor="middle" className="fill-status-warn font-mono" fontSize={9}>
+          503 × {overloaded}
         </text>
       </g>
 

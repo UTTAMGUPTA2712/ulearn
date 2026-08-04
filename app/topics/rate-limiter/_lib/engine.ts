@@ -8,6 +8,16 @@ const LINGER_MS = 260;
 const HAMMER_COUNT = 8;
 const HAMMER_STAGGER_MS = 70;
 
+/**
+ * How many requests the API can have in flight at once. A per-IP limiter
+ * passes each spoofed DDoS address individually, but the backend behind it
+ * still has finite capacity — once more requests are converging on it than
+ * this, arrivals get dropped with a 503 even though the limiter waved them
+ * through. This is what makes a DDoS run visibly fail differently from a
+ * single hammered client: 429s barely move, 503s climb instead.
+ */
+const MAX_CONCURRENT_API = 14;
+
 /** Safety valve so a DDoS demo can't grow the packet array without bound. */
 const MAX_VISIBLE_REQUESTS = 70;
 const MAX_LOG_LINES = 60;
@@ -40,7 +50,7 @@ export class RateLimiterEngine {
   refillRate = 2;
   requests: RequestPacket[] = [];
   log: LogEntry[] = [];
-  stats = { sent: 0, allowed: 0, limited: 0 };
+  stats = { sent: 0, allowed: 0, limited: 0, overloaded: 0 };
   autoStream = false;
   autoStreamRate = 2;
   ddosActive = false;
@@ -218,7 +228,7 @@ export class RateLimiterEngine {
       req.phase = "to-api";
       req.phaseStart = this.now;
       req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
-      this.stats.allowed++;
+      // Final outcome (success vs. API overload) is decided on arrival — see finalizeAtApi.
     } else {
       client.limited++;
       req.outcome = "limited";
@@ -232,9 +242,24 @@ export class RateLimiterEngine {
   }
 
   private finalizeAtApi(req: RequestPacket) {
+    const concurrentAtApi = this.requests.filter(
+      (r) => r.id !== req.id && r.phase === "to-api",
+    ).length;
+
     req.phase = "returning";
     req.phaseStart = this.now;
     req.phaseDuration = RETURN_MS;
+
+    if (concurrentAtApi >= MAX_CONCURRENT_API) {
+      req.outcome = "overloaded";
+      this.stats.overloaded++;
+      const tag = req.isDdos ? `${req.clientId} (flood)` : req.clientId;
+      this.addLog("error", `503 — API overloaded, dropped request from ${tag}`);
+      return;
+    }
+
+    req.outcome = "allowed";
+    this.stats.allowed++;
   }
 
   tick(deltaMs: number) {

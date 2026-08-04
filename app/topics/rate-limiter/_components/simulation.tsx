@@ -24,6 +24,7 @@ export function RateLimiterSimulation() {
     { label: "sent", value: snapshot.stats.sent },
     { label: "allowed", value: snapshot.stats.allowed, color: "var(--status-up)" },
     { label: "limited (429)", value: snapshot.stats.limited, color: "var(--status-down)" },
+    { label: "overloaded (503)", value: snapshot.stats.overloaded, color: "var(--status-warn)" },
   ];
 
   return (
@@ -35,6 +36,7 @@ export function RateLimiterSimulation() {
             algorithm={snapshot.algorithm}
             allowed={snapshot.stats.allowed}
             limited={snapshot.stats.limited}
+            overloaded={snapshot.stats.overloaded}
             requests={snapshot.requests}
             now={snapshot.now}
           />

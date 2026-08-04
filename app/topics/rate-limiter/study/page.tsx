@@ -18,7 +18,7 @@ const SECTIONS = [
 
 export default function RateLimiterStudyPage() {
   return (
-    <div className="flex gap-12">
+    <div className="mx-auto flex max-w-[67rem] gap-12">
       <div className="min-w-0 max-w-3xl flex-1 space-y-8">
         <Section title="What a rate limiter actually does">
           <p>
@@ -89,9 +89,12 @@ export default function RateLimiterStudyPage() {
             load balancer keeps spreading a flood evenly across healthy backends right up
             until they all fall over. A rate limiter keyed by IP keeps every individual
             spoofed address under its limit while the aggregate request rate still floods
-            the backend. Real defenses combine both with something upstream of either — CDN
-            or edge-level filtering, IP reputation, and challenge/CAPTCHA gating — rather
-            than expecting one mechanism to carry the whole load.
+            the backend — run &ldquo;Simulate DDoS&rdquo; and watch the limiter&apos;s{" "}
+            <code>429</code> count barely move while the API&apos;s <code>503</code> count
+            climbs instead: the limiter waved every spoofed address through individually,
+            and the backend paid for it. Real defenses combine both with something upstream
+            of either — CDN or edge-level filtering, IP reputation, and challenge/CAPTCHA
+            gating — rather than expecting one mechanism to carry the whole load.
           </p>
         </Section>
 
