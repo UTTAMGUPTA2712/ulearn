@@ -54,6 +54,8 @@ export interface RequestPacket {
   outcome: RequestOutcome | null;
   isDdos: boolean;
   attackKind?: AttackKind;
+  fromNode?: "client" | "limiter" | "global" | "api";
+  toNode?: "client" | "limiter" | "global" | "api";
 }
 
 /** A network/protocol-layer attack packet that never reaches the app — see `NetworkAttackKind`. */

@@ -223,6 +223,8 @@ export class RateLimiterEngine {
         outcome: null,
         isDdos: true,
         attackKind,
+        fromNode: "client",
+        toNode: "api",
       });
       this.stats.sent++;
       return;
@@ -237,6 +239,8 @@ export class RateLimiterEngine {
       outcome: null,
       isDdos,
       attackKind,
+      fromNode: "client",
+      toNode: "limiter",
     });
     this.stats.sent++;
   }
@@ -268,6 +272,8 @@ export class RateLimiterEngine {
         phaseDuration: TO_LIMITER_MS + i * HAMMER_STAGGER_MS,
         outcome: null,
         isDdos: false,
+        fromNode: "client",
+        toNode: "limiter",
       });
       this.stats.sent++;
     }
@@ -349,10 +355,14 @@ export class RateLimiterEngine {
         req.phase = "to-global";
         req.phaseStart = this.now;
         req.phaseDuration = TO_GLOBAL_MS;
+        req.fromNode = "limiter";
+        req.toNode = "global";
       } else {
         req.phase = "to-api";
         req.phaseStart = this.now;
         req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
+        req.fromNode = "limiter";
+        req.toNode = "api";
       }
       // Final outcome (success vs. throttled vs. API overload) is decided further downstream.
     } else {
@@ -361,6 +371,8 @@ export class RateLimiterEngine {
       req.phase = "returning";
       req.phaseStart = this.now;
       req.phaseDuration = RETURN_MS;
+      req.fromNode = "limiter";
+      req.toNode = "client";
       this.stats.limited++;
       const tag = req.isDdos ? `${req.clientId} (flood)` : req.clientId;
       this.addLog("warn", `429 — ${tag} rate-limited`);
@@ -373,6 +385,15 @@ export class RateLimiterEngine {
    * dodge it by rotating source addresses.
    */
   private resolveAtGlobal(req: RequestPacket) {
+    if (!this.globalLimiterActive) {
+      req.phase = "to-api";
+      req.phaseStart = this.now;
+      req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
+      req.fromNode = "global";
+      req.toNode = "api";
+      return;
+    }
+
     this.refillGlobalTokens();
 
     if (this.globalTokens >= 1) {
@@ -380,6 +401,8 @@ export class RateLimiterEngine {
       req.phase = "to-api";
       req.phaseStart = this.now;
       req.phaseDuration = randomBetween(TO_API_MIN_MS, TO_API_MAX_MS);
+      req.fromNode = "global";
+      req.toNode = "api";
       return;
     }
 
@@ -387,6 +410,8 @@ export class RateLimiterEngine {
     req.phase = "returning";
     req.phaseStart = this.now;
     req.phaseDuration = RETURN_MS;
+    req.fromNode = "global";
+    req.toNode = "client";
     this.stats.throttled++;
     const tag = req.isDdos ? `${req.clientId} (flood)` : req.clientId;
     this.addLog("warn", `429 — ${tag} throttled by server-wide limiter`);
@@ -400,6 +425,8 @@ export class RateLimiterEngine {
     req.phase = "returning";
     req.phaseStart = this.now;
     req.phaseDuration = RETURN_MS;
+    req.fromNode = "api";
+    req.toNode = "client";
 
     if (concurrentAtApi >= MAX_CONCURRENT_API) {
       req.outcome = "overloaded";
@@ -427,6 +454,8 @@ export class RateLimiterEngine {
       req.phase = "returning";
       req.phaseStart = this.now;
       req.phaseDuration = RETURN_MS;
+      req.fromNode = "api";
+      req.toNode = "client";
       this.stats.overloaded++;
       this.addLog("error", `503 — connection slots exhausted, ${req.clientId} (Slowloris) refused`);
       return;
@@ -435,6 +464,8 @@ export class RateLimiterEngine {
     req.phase = "held";
     req.phaseStart = this.now;
     req.phaseDuration = randomBetween(SLOWLORIS_HOLD_MIN_MS, SLOWLORIS_HOLD_MAX_MS);
+    req.fromNode = "api";
+    req.toNode = "api";
   }
 
   tick(deltaMs: number) {
@@ -505,11 +536,15 @@ export class RateLimiterEngine {
           req.phase = "done";
           req.phaseStart = this.now;
           req.phaseDuration = LINGER_MS;
+          req.fromNode = "api";
+          req.toNode = "client";
           break;
         case "returning":
           req.phase = "done";
           req.phaseStart = this.now;
           req.phaseDuration = LINGER_MS;
+          req.fromNode = "client";
+          req.toNode = "client";
           break;
       }
     }

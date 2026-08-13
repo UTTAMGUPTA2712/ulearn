@@ -66,6 +66,13 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
+const NODE_COORDS: Record<string, { x: number; y: number }> = {
+  client: CLIENT,
+  limiter: LIMITER,
+  global: GLOBAL,
+  api: API,
+};
+
 function packetPosition(
   req: RequestPacket,
   now: number,
@@ -76,6 +83,28 @@ function packetPosition(
   // Attack traffic is red the whole way through, not just outlined at the
   // end — legitimate requests stay cyan so the flood is visible in flight.
   const transitColor = req.isDdos ? "var(--status-down)" : "var(--status-active)";
+
+  if (req.fromNode && req.toNode) {
+    const fromCoord = NODE_COORDS[req.fromNode];
+    const toCoord = NODE_COORDS[req.toNode];
+    const color =
+      req.phase === "returning" || req.phase === "done"
+        ? OUTCOME_COLOR[req.outcome ?? "allowed"]
+        : transitColor;
+    const opacity = req.phase === "done" ? 1 - t : 1;
+
+    if (req.phase === "held") {
+      const { dx, dy } = heldOffset(req.id);
+      return { x: API.x + dx, y: API.y + dy, color: "var(--status-down)", opacity: 0.85 };
+    }
+
+    return {
+      x: lerp(fromCoord.x, toCoord.x, eased),
+      y: lerp(fromCoord.y, toCoord.y, eased),
+      color,
+      opacity,
+    };
+  }
 
   switch (req.phase) {
     case "to-limiter":
@@ -162,14 +191,8 @@ export function RateLimiterDiagram({
     >
       {/* Static topology lines */}
       <line x1={CLIENT.x} y1={CLIENT.y} x2={LIMITER.x} y2={LIMITER.y} stroke="var(--border-strong)" strokeWidth={1.5} />
-      {globalLimiterActive ? (
-        <>
-          <line x1={LIMITER.x} y1={LIMITER.y} x2={GLOBAL.x} y2={GLOBAL.y} stroke="var(--border-strong)" strokeWidth={1.5} />
-          <line x1={GLOBAL.x} y1={GLOBAL.y} x2={API.x} y2={API.y} stroke="var(--border-strong)" strokeWidth={1.5} />
-        </>
-      ) : (
-        <line x1={LIMITER.x} y1={LIMITER.y} x2={API.x} y2={API.y} stroke="var(--border-strong)" strokeWidth={1.5} />
-      )}
+      <line x1={LIMITER.x} y1={LIMITER.y} x2={GLOBAL.x} y2={GLOBAL.y} stroke="var(--border-strong)" strokeWidth={1.5} />
+      <line x1={GLOBAL.x} y1={GLOBAL.y} x2={API.x} y2={API.y} stroke="var(--border-strong)" strokeWidth={1.5} />
 
       {/* Network edge — where SYN floods / UDP amplification die before ever becoming an HTTP request */}
       <line
@@ -258,30 +281,37 @@ export function RateLimiterDiagram({
         </text>
       </g>
 
-      {/* Global (server-wide) limiter node — only on the path when enabled */}
-      {globalLimiterActive && (
-        <g>
-          <rect
-            x={GLOBAL.x - 60}
-            y={GLOBAL.y - 34}
-            width={120}
-            height={68}
-            rx={14}
-            fill="var(--panel-raised)"
-            stroke="var(--status-active)"
-            strokeWidth={1.5}
-          />
-          <text x={GLOBAL.x} y={GLOBAL.y - 8} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
-            Server limiter
+      {/* Global (server-wide) limiter node — always on path, styled by active state */}
+      <g className="transition-all duration-300" style={{ opacity: globalLimiterActive ? 1 : 0.4 }}>
+        <rect
+          x={GLOBAL.x - 60}
+          y={GLOBAL.y - 34}
+          width={120}
+          height={68}
+          rx={14}
+          fill="var(--panel-raised)"
+          stroke={globalLimiterActive ? "var(--status-active)" : "var(--border-strong)"}
+          strokeWidth={1.5}
+          strokeDasharray={globalLimiterActive ? "none" : "3 3"}
+        />
+        <text x={GLOBAL.x} y={GLOBAL.y - 8} textAnchor="middle" className="fill-text" fontSize={13} fontWeight={600}>
+          Server limiter
+        </text>
+        {globalLimiterActive ? (
+          <>
+            <text x={GLOBAL.x} y={GLOBAL.y + 12} textAnchor="middle" className="fill-status-active font-mono" fontSize={9}>
+              {globalTokens.toFixed(0)}/{globalCapacity} tokens
+            </text>
+            <text x={GLOBAL.x} y={GLOBAL.y + 26} textAnchor="middle" className="fill-status-active font-mono" fontSize={9}>
+              429 × {throttled}
+            </text>
+          </>
+        ) : (
+          <text x={GLOBAL.x} y={GLOBAL.y + 19} textAnchor="middle" className="fill-text-faint font-mono" fontSize={9}>
+            bypassed
           </text>
-          <text x={GLOBAL.x} y={GLOBAL.y + 12} textAnchor="middle" className="fill-status-active font-mono" fontSize={9}>
-            {globalTokens.toFixed(0)}/{globalCapacity} tokens
-          </text>
-          <text x={GLOBAL.x} y={GLOBAL.y + 26} textAnchor="middle" className="fill-status-active font-mono" fontSize={9}>
-            429 × {throttled}
-          </text>
-        </g>
-      )}
+        )}
+      </g>
 
       {/* API node */}
       <g>

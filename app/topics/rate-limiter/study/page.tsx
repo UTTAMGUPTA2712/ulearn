@@ -90,7 +90,7 @@ export default function RateLimiterStudyPage() {
             load balancer keeps spreading a flood evenly across healthy backends right up
             until they all fall over. A rate limiter keyed by IP keeps every individual
             spoofed address under its limit while the aggregate request rate still floods
-            the backend — run the <strong>HTTP Flood</strong> attack and watch the
+            the backend — run the <strong>HTTP Flood</strong>{" "}attack and watch the
             limiter&apos;s <code>429</code> count barely move while the API&apos;s{" "}
             <code>503</code> count climbs instead: the limiter waved every spoofed address
             through individually, and the backend paid for it. Notice the client node itself
@@ -99,7 +99,7 @@ export default function RateLimiterStudyPage() {
             thousands of different ones, each looking like a legitimate first-time caller.
           </p>
           <p>
-            Now turn on the <strong>server-wide limiter</strong> and run the same flood
+            Now turn on the <strong>server-wide limiter</strong>{" "}and run the same flood
             again. It sits behind the per-client limiter and shares one bucket across every
             client and spoofed address combined, so rotating source IPs no longer buys the
             attacker anything — the aggregate rate hits a wall regardless of how many
@@ -132,8 +132,8 @@ export default function RateLimiterStudyPage() {
             <em>does</em> reach the app layer but still slips past both limiters here. It
             never sends a complete request, so a limiter that counts completed requests has
             nothing to count — run it and watch it skip straight past the{" "}
-            <code>Rate limiter</code> and <code>Server limiter</code> nodes entirely, heading
-            for the API&apos;s <code>held</code> connection-slot gauge instead. Enough
+            <code>Rate limiter</code>{" "}and <code>Server limiter</code>{" "}nodes entirely, heading
+            for the API&apos;s <code>held</code>{" "}connection-slot gauge instead. Enough
             simultaneous slow connections exhaust that pool just as effectively as a flood
             exhausts request-processing capacity, and no amount of per-request rate-limit
             tuning touches it — the actual fix is a connection or header-read timeout that

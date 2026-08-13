@@ -304,7 +304,7 @@ export function ClientList({
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs text-text">{client.clientId}</span>
                 <span className="font-mono text-[10px] text-text-faint">
-                  {left.toFixed(algorithm === "token-bucket" ? 1 : 0)}/{limit} left
+                  {left.toFixed(algorithm === "token-bucket" || algorithm === "leaky-bucket" ? 1 : 0)}/{limit} left
                 </span>
               </div>
               <div className="mt-2 h-1.5 w-full rounded-full bg-border">
