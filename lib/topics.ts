@@ -41,9 +41,10 @@ export const topics: readonly Topic[] = [
   {
     slug: "message-queue",
     title: "Message Queue",
-    tagline: "Producers, consumers, backpressure, and what happens when a consumer dies mid-job.",
+    tagline:
+      "Work queue vs. fan-out pub/sub, backpressure policies, and redelivery — kill a consumer mid-job and watch the visibility timeout, retries and dead-letter queue take over.",
     category: "Async & Messaging",
-    status: "planned",
+    status: "available",
   },
   {
     slug: "consistent-hashing",

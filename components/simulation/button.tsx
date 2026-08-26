@@ -22,7 +22,7 @@ export function Button({
     <button
       type="button"
       className={cn(
-        "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all",
+        "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-40",
         primary
           ? "border-accent bg-accent text-accent-foreground hover:opacity-90"
           : active
