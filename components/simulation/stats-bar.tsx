@@ -1,6 +1,7 @@
 export type StatItem = {
   label: string;
-  value: number;
+  /** A plain number, or a pre-formatted string (e.g. `"1.23s"`) for values that need units/precision. */
+  value: number | string;
   /** CSS color value, e.g. `var(--status-up)`. Omit for the default `--text` color. */
   color?: string;
 };
