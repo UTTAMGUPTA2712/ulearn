@@ -30,6 +30,29 @@ const OUTCOME_COLOR: Record<string, string> = {
   dropped: "var(--status-down)",
 };
 
+/** Explains what each dot color means — without it the animation is just colored motion. */
+const LEGEND_ITEMS: { x: number; color: string; label: string }[] = [
+  { x: 20, color: TRANSIT_COLOR, label: "in transit" },
+  { x: 150, color: "var(--status-warn)", label: "retrying" },
+  { x: 280, color: "var(--status-up)", label: "acked" },
+  { x: 420, color: "var(--status-down)", label: "dead-lettered / dropped" },
+];
+
+/** Small chevron at the midpoint of a static line, so the topology reads as a flow instead of just connected boxes. */
+function FlowArrow({ from, to, opacity = 0.6 }: { from: { x: number; y: number }; to: { x: number; y: number }; opacity?: number }) {
+  const mx = (from.x + to.x) / 2;
+  const my = (from.y + to.y) / 2;
+  const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
+  return (
+    <polygon
+      points="-5,-4 5,0 -5,4"
+      fill="var(--border-strong)"
+      opacity={opacity}
+      transform={`translate(${mx}, ${my}) rotate(${angle})`}
+    />
+  );
+}
+
 export function MessageQueueDiagram({
   mode,
   now,
@@ -79,17 +102,16 @@ export function MessageQueueDiagram({
     >
       {/* Static topology */}
       <line x1={PRODUCER.x} y1={PRODUCER.y} x2={BROKER.x} y2={BROKER.y} stroke="var(--border-strong)" strokeWidth={1.5} />
-      {consumers.map((c, i) => (
-        <line
-          key={`line-${c.id}`}
-          x1={BROKER.x}
-          y1={BROKER.y}
-          x2={CONSUMER_X}
-          y2={consumerY(i, consumers.length)}
-          stroke="var(--border-strong)"
-          strokeWidth={1.5}
-        />
-      ))}
+      <FlowArrow from={PRODUCER} to={BROKER} />
+      {consumers.map((c, i) => {
+        const to = { x: CONSUMER_X, y: consumerY(i, consumers.length) };
+        return (
+          <g key={`line-${c.id}`}>
+            <line x1={BROKER.x} y1={BROKER.y} x2={to.x} y2={to.y} stroke="var(--border-strong)" strokeWidth={1.5} />
+            <FlowArrow from={BROKER} to={to} />
+          </g>
+        );
+      })}
       {consumers.map((c, i) => (
         <line
           key={`dlq-line-${c.id}`}
@@ -102,6 +124,18 @@ export function MessageQueueDiagram({
           strokeDasharray="2 3"
         />
       ))}
+
+      {/* Legend — the moving dots are otherwise just colored motion with no stated meaning */}
+      <g>
+        {LEGEND_ITEMS.map((item) => (
+          <g key={item.label} transform={`translate(${item.x}, 16)`}>
+            <circle cx={0} cy={0} r={4} fill={item.color} />
+            <text x={9} y={3} className="fill-text-faint" fontSize={9}>
+              {item.label}
+            </text>
+          </g>
+        ))}
+      </g>
 
       {/* Producer node */}
       <g>
@@ -227,9 +261,20 @@ export function MessageQueueDiagram({
               {c.processed} ok · {c.failed} failed
             </text>
             {mode === "fanout" && (
-              <text x={CONSUMER_X} y={y - 46} textAnchor="middle" className="fill-text-faint font-mono" fontSize={9}>
-                backlog {c.queueLength}/{capacity}
-              </text>
+              <g>
+                <text x={CONSUMER_X} y={y - 46} textAnchor="middle" className="fill-text-faint font-mono" fontSize={9}>
+                  backlog {c.queueLength}/{capacity}
+                </text>
+                <rect x={CONSUMER_X - 44} y={y - 41} width={88} height={4} rx={2} fill="var(--border)" />
+                <rect
+                  x={CONSUMER_X - 44}
+                  y={y - 41}
+                  width={88 * Math.min(1, c.queueLength / capacity)}
+                  height={4}
+                  rx={2}
+                  fill="var(--accent)"
+                />
+              </g>
             )}
           </g>
         );
@@ -280,7 +325,11 @@ export function MessageQueueDiagram({
 
         if (m.phase === "acked") {
           const at = consumerCoord(m.consumerId);
-          return <circle key={m.id} cx={at.x} cy={at.y - 46} r={4.5} fill={OUTCOME_COLOR.acked} opacity={1 - t} />;
+          return (
+            <circle key={m.id} cx={at.x} cy={at.y - 46} r={4.5} fill={OUTCOME_COLOR.acked} opacity={1 - t}>
+              <title>{`Message #${m.id} · acked`}</title>
+            </circle>
+          );
         }
 
         let from = PRODUCER;
@@ -300,6 +349,10 @@ export function MessageQueueDiagram({
         }
 
         const color = m.phase === "to-requeue" ? "var(--status-warn)" : m.phase === "to-dlq" ? "var(--status-down)" : TRANSIT_COLOR;
+        // A message being redelivered after a failure/crash gets a ring so
+        // the retry is traceable in flight, not just inferable from the
+        // amber backlog slot it lands in.
+        const isRedelivery = m.attempts > 0 && m.phase === "to-consumer";
 
         return (
           <circle
@@ -309,7 +362,11 @@ export function MessageQueueDiagram({
             r={4.5}
             fill={color}
             opacity={1}
-          />
+            stroke={isRedelivery ? "var(--status-warn)" : "none"}
+            strokeWidth={isRedelivery ? 2 : 0}
+          >
+            <title>{`Message #${m.id}${m.attempts > 0 ? ` · attempt ${m.attempts + 1}` : ""}`}</title>
+          </circle>
         );
       })}
     </svg>
