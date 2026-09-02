@@ -1,5 +1,5 @@
-import { BrokerMatcher } from "./_components/matcher";
+import { Mechanics } from "./_components/mechanics";
 
 export default function RabbitMqVsKafkaPage() {
-  return <BrokerMatcher />;
+  return <Mechanics />;
 }

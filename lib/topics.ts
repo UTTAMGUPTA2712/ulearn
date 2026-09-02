@@ -65,7 +65,7 @@ export const topics: readonly Topic[] = [
     slug: "rabbitmq-vs-kafka",
     title: "RabbitMQ vs Kafka",
     tagline:
-      "Smart broker vs dumb log — describe a workload's traits and watch the recommendation and reasoning update live, then see the same call made across nine real scenarios.",
+      "Smart broker vs dumb log — watch the same event get pushed and deleted on one side while it sits in a log getting pulled by independent consumer groups on the other.",
     category: "Async & Messaging",
     status: "available",
   },
