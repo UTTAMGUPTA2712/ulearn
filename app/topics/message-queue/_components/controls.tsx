@@ -1,6 +1,8 @@
 import { Button } from "@/components/simulation/button";
+import { Term } from "@/components/study/term";
 import { StatusDot } from "@/components/ui/status-dot";
 
+import { GLOSSARY } from "../_lib/glossary";
 import type { BackpressurePolicy, ConsumerState, DeliveryMode } from "../_lib/types";
 
 export function DeliveryModeSwitch({ mode, onChange }: { mode: DeliveryMode; onChange: (m: DeliveryMode) => void }) {
@@ -16,9 +18,17 @@ export function DeliveryModeSwitch({ mode, onChange }: { mode: DeliveryMode; onC
         </Button>
       </div>
       <p className="mt-2 text-[11px] leading-relaxed text-text-faint">
-        {mode === "queue"
-          ? "One shared backlog — each message is delivered to exactly one consumer, whichever is free first."
-          : "Every consumer gets its own copy of every message, and keeps its own backlog if it falls behind."}
+        {mode === "queue" ? (
+          <>
+            One shared backlog — each message is delivered to exactly one{" "}
+            <Term id="work-queue" glossary={GLOSSARY}>consumer, whichever is free first</Term>.
+          </>
+        ) : (
+          <>
+            Every consumer gets its own <Term id="fanout" glossary={GLOSSARY}>copy of every message</Term>, and
+            keeps its own backlog if it falls behind.
+          </>
+        )}
       </p>
     </div>
   );
@@ -94,7 +104,7 @@ export function BrokerConfig({
           <span className="w-10 shrink-0 text-right font-mono">{Math.round(failureRate * 100)}%</span>
         </label>
         <label className="flex items-center gap-2 text-[11px] text-text-muted">
-          visibility timeout
+          <Term id="visibility-timeout" glossary={GLOSSARY}>visibility timeout</Term>
           <input
             type="range"
             min={500}
@@ -107,7 +117,7 @@ export function BrokerConfig({
           <span className="w-12 shrink-0 text-right font-mono">{(visibilityTimeoutMs / 1000).toFixed(1)}s</span>
         </label>
         <label className="flex items-center gap-2 text-[11px] text-text-muted">
-          max retries
+          <Term id="max-retries" glossary={GLOSSARY}>max retries</Term>
           <input
             type="range"
             min={1}
@@ -120,7 +130,9 @@ export function BrokerConfig({
         </label>
 
         <div className="pt-1">
-          <p className="text-[11px] text-text-faint">backpressure, once the backlog is full</p>
+          <p className="text-[11px] text-text-faint">
+            <Term id="backpressure" glossary={GLOSSARY}>backpressure</Term>, once the backlog is full
+          </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <Button active={backpressurePolicy === "drop"} onClick={() => onSetBackpressurePolicy("drop")}>
               Drop new messages

@@ -393,10 +393,54 @@ stats *are*) is topic-specific and belongs under `app/topics/<slug>/`.
   `slugify`), `ConceptCard` (`panel` + hairline border + `rounded-xl`, sans
   name, muted sans explanation), `ComparisonTable` (`panel-raised` headers,
   sans uppercase column labels, hairline row dividers, generic
-  `columns`/`rows` props), and `TableOfContents` (sticky "on this page" nav,
+  `columns`/`rows` props), `TableOfContents` (sticky "on this page" nav,
   takes the same `sections: string[]` title list passed to each `Section` so
-  the anchors always match). This is the full pattern for any future study
-  page — reuse all four rather than hand-rolling prose components again.
+  the anchors always match), and `Term` (see below). This is the full
+  pattern for any future study page — reuse all five rather than
+  hand-rolling prose components again.
+- **Glossary term popover** (`components/study/term.tsx`) — a `Term`
+  component for inline jargon. Renders its children (or the entry's `term`
+  if none given) with a dotted underline; hover, focus, or tap opens a
+  small `panel-raised` popover below it showing the term and its
+  definition. It's deliberately dumb: pass it `id` plus a topic's own
+  `glossary: GlossaryEntry[]` array (from that topic's `_lib/glossary.ts`)
+  and it looks the entry up — the definition lives in exactly one place per
+  topic, never duplicated between a popover and the glossary page. Fails
+  open (renders plain text) if the id doesn't resolve, so a typo never
+  breaks a page. Use it anywhere a term first appears in Simulate, Match,
+  or control-panel copy — not in Study prose, which already *is* the
+  full-length definition.
+- **Topic glossary tab** (`/topics/<slug>/glossary`) — every topic with
+  jargon dense enough to need `Term` popovers also gets a `Glossary` tab
+  (added last in that topic's `TopicTabs` list, after Study), rendering its
+  full `GLOSSARY` array through `Section`/`ConceptCard` — group related
+  terms under a few `Section`s if the list is long (see
+  `rate-limiter`'s "Limiting algorithms" / "Outcomes" / "Attacks"), or one
+  flat `Section` if it isn't (see `message-queue`). This is the same list
+  the `Term` popovers read from, just laid out for a reader who wants the
+  whole vocabulary at once instead of hovering term by term.
+- **Onboarding banner** — a topic's Simulate page, when it assumes
+  vocabulary a first-time visitor hasn't seen yet, opens with a one-line
+  `rounded-xl border border-border bg-panel-raised px-4 py-2.5 text-xs
+  text-text-muted` callout above the stats bar: *"New here? Hover any
+  underlined word for a quick definition, or [start with Study →]"*, the
+  bracketed part an accent `Link` to that topic's Study page. Keep it to
+  one line and one link — this is a pointer, not a second hero.
+- **Diagram legend** — any SVG simulation diagram where color, dash
+  pattern, or shape carries meaning that isn't already spelled out in
+  visible text next to it (a node's own inline label, e.g. "healthy" under
+  a backend, needs no legend entry — a moving dot's color does) needs a
+  legend: small dot/line/shape + `fill-text-faint` label pairs at
+  `fontSize={8.5}`, laid out in a single row from a `LEGEND_ITEMS` array of
+  `{x, color, label}` (add a `ring?: boolean` field when an item is a
+  stroked outline rather than a filled dot, e.g. "DDoS request" in
+  `load-balancer`). Place the row wherever the diagram has spare vertical
+  room — top (`message-queue`) or a dedicated bottom strip (`load-balancer`,
+  `rate-limiter`, `rabbitmq-vs-kafka`) both work. When a diagram's node
+  coordinates are already hardcoded absolute values rather than derived
+  from `VIEW_H`, bump `VIEW_H` by the legend row's height instead of
+  renumbering existing coordinates — every other position stays untouched
+  and the SVG just gets a taller viewBox.
 
 When adding a new component, find the closest existing pattern in this list
 and extend it rather than inventing a new visual idiom.
@@ -448,11 +492,26 @@ and extend it rather than inventing a new visual idiom.
   presented with more warmth and room than a bare dashboard would give it.
 - **Topic hub (`/topics/<slug>`)** — the simulation is the page. Controls
   and stats bar frame it; there is no separate "hero" above the simulation
-  competing for attention.
+  competing for attention. An auto-running simulation (`autoPublish`/
+  `autoStream`) defaults to **off** — a first-time visitor should see a
+  static, inspectable diagram and start it deliberately (via "Publish
+  one"/"Send one request" or the auto toggle), not land mid-stream before
+  they've had a chance to read what anything on screen means. If the page
+  assumes vocabulary a reader may not have yet, it opens with the
+  onboarding banner from §10.
 - **Study (`/topics/<slug>/study`)** — pure reading surface: stacked
   `Section`s, `max-w-3xl`, sans eyebrows, sans prose, comparison tables and
-  concept cards where useful. This is the one page type that's allowed to
-  feel like a well-designed article rather than a dashboard.
+  concept cards where useful, inside an `mx-auto max-w-[67rem]` wrapper
+  alongside `TableOfContents` so the whole two-column reading layout stays
+  centered rather than pinned to the left edge on a wide viewport. This is
+  the one page type that's allowed to feel like a well-designed article
+  rather than a dashboard.
+- **Glossary (`/topics/<slug>/glossary`)** — present whenever a topic's
+  Simulate/Match copy leans on jargon (see §10's glossary tab and `Term`
+  bullets). Same `mx-auto max-w-3xl` reading-column treatment as Study, but
+  simpler: one short intro line explaining the hover behavior, then the
+  topic's `GLOSSARY` rendered as `ConceptCard`s under one or a few
+  `Section`s — no `TableOfContents` needed at this length.
 
 ---
 
@@ -469,7 +528,17 @@ When a new topic ships, confirm it before merging:
 - [ ] Card on the homepage matches the existing topic-card pattern exactly
       (no bespoke card layout for one topic)
 - [ ] Study page (if present) reuses `Section`/`AlgoCard`/table patterns
-      rather than introducing new prose components
+      rather than introducing new prose components, and its outer wrapper is
+      `mx-auto max-w-[67rem]` like every other topic's (§13) — not just
+      `flex gap-12` with nothing capping or centering it
+- [ ] Any diagram color, dash pattern, or shape that isn't already spelled
+      out in inline text next to it has a legend entry (§10)
+- [ ] Jargon a reader may not know yet has a `_lib/glossary.ts` entry, is
+      wired through `<Term>` where it first appears, and the topic has a
+      `Glossary` tab listing the full set (§10, §13)
+- [ ] Any auto-running simulation defaults to off, and a page that assumes
+      vocabulary before Study explains it carries the onboarding banner
+      (§10, §13)
 - [ ] Copy passes the §9 voice check — no hype words, no fake urgency
 - [ ] Nothing on the page appears in the §2 anti-pattern list
 - [ ] Checked in both light and dark themes (§7) — contrast holds, no color

@@ -38,7 +38,10 @@ let groupIdCounter = 0;
  */
 export class MechanicsEngine {
   now = 0;
-  autoPublish = true;
+  // Starts off so a first-time viewer sees a static, inspectable diagram and
+  // clicks "Publish one" deliberately, instead of a live stream starting
+  // before they've had a chance to read what anything on screen means.
+  autoPublish = false;
   publishRate = 1.5;
   private spawnAccumulator = 0;
 

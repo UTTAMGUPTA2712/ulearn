@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 const TABS = [
   { href: "/topics/rate-limiter", label: "Simulate" },
   { href: "/topics/rate-limiter/study", label: "Study" },
+  { href: "/topics/rate-limiter/glossary", label: "Glossary" },
 ];
 
 export default function RateLimiterLayout({ children }: { children: React.ReactNode }) {

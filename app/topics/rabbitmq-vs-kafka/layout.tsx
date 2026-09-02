@@ -11,6 +11,7 @@ const TABS = [
   { href: "/topics/rabbitmq-vs-kafka", label: "Simulate" },
   { href: "/topics/rabbitmq-vs-kafka/match", label: "Match" },
   { href: "/topics/rabbitmq-vs-kafka/study", label: "Study" },
+  { href: "/topics/rabbitmq-vs-kafka/glossary", label: "Glossary" },
 ];
 
 export default function RabbitMqVsKafkaLayout({ children }: { children: React.ReactNode }) {

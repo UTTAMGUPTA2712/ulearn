@@ -1,8 +1,12 @@
 import type { KafkaGroup, MechanicsSnapshot } from "../_lib/mechanics-types";
 
 const VIEW_W = 820;
-const VIEW_H = 380;
+// 40px taller than the tallest content actually drawn (~346px), purely to
+// leave room for the legend row at the bottom without touching any of the
+// existing element coordinates above.
+const VIEW_H = 420;
 const MID = 405;
+const LEGEND_Y = VIEW_H - 14;
 
 const PRODUCER_L = { x: 50, y: 190 };
 const QUEUE_BOX = { x: 110, y: 140, w: 130, h: 100 };
@@ -43,7 +47,31 @@ export function MechanicsDiagram({ snapshot }: { snapshot: MechanicsSnapshot }) 
 
   return (
     <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="h-full w-full" role="img" aria-label="RabbitMQ push-and-delete vs Kafka pull-and-retain mechanics">
-      <line x1={MID} y1={16} x2={MID} y2={VIEW_H - 12} stroke="var(--border)" strokeWidth={1} strokeDasharray="3 4" />
+      <line x1={MID} y1={16} x2={MID} y2={VIEW_H - 32} stroke="var(--border)" strokeWidth={1} strokeDasharray="3 4" />
+
+      {/* Legend — dot colors, block shapes and line styles otherwise carry no stated meaning */}
+      <g fontSize={8.5} className="fill-text-faint">
+        <circle cx={26} cy={LEGEND_Y} r={4} fill="var(--status-active)" />
+        <text x={35} y={LEGEND_Y + 3}>message</text>
+
+        <circle cx={110} cy={LEGEND_Y} r={4} fill="var(--status-up)" />
+        <text x={119} y={LEGEND_Y + 3}>acked</text>
+
+        <rect x={420} y={LEGEND_Y - 5} width={10} height={10} rx={2} fill="var(--accent-dim)" stroke="var(--accent)" strokeWidth={1} />
+        <text x={435} y={LEGEND_Y + 3}>log entry</text>
+
+        <line x1={496} y1={LEGEND_Y - 6} x2={496} y2={LEGEND_Y + 6} stroke="var(--accent)" strokeWidth={1.5} />
+        <text x={504} y={LEGEND_Y + 3}>this group&apos;s offset</text>
+
+        <line x1={613} y1={LEGEND_Y - 6} x2={613} y2={LEGEND_Y + 6} stroke="var(--text-faint)" strokeWidth={1.5} strokeDasharray="3 3" />
+        <text x={621} y={LEGEND_Y + 3}>other group&apos;s offset</text>
+
+        <g stroke="var(--status-down)" strokeWidth={1.5} strokeLinecap="round">
+          <line x1={735} y1={LEGEND_Y - 4} x2={743} y2={LEGEND_Y + 4} />
+          <line x1={735} y1={LEGEND_Y + 4} x2={743} y2={LEGEND_Y - 4} />
+        </g>
+        <text x={751} y={LEGEND_Y + 3}>evicted</text>
+      </g>
 
       {/* ---------- RabbitMQ ---------- */}
       <text x={200} y={24} textAnchor="middle" className="fill-accent" fontSize={12} fontWeight={600}>

@@ -1,5 +1,6 @@
 export type StatItem = {
-  label: string;
+  /** Usually a plain string; a `ReactNode` is allowed so a label can embed something like a `<Term>` glossary popover on a jargon word. */
+  label: React.ReactNode;
   /** A plain number, or a pre-formatted string (e.g. `"1.23s"`) for values that need units/precision. */
   value: number | string;
   /** CSS color value, e.g. `var(--status-up)`. Omit for the default `--text` color. */
@@ -21,8 +22,10 @@ function Stat({ label, value, color }: StatItem) {
 export function StatsBar({ items }: { items: StatItem[] }) {
   return (
     <div className="flex flex-wrap gap-x-6 gap-y-1 rounded-xl border border-border bg-panel px-5 py-4 shadow-sm">
-      {items.map((item) => (
-        <Stat key={item.label} {...item} />
+      {items.map((item, i) => (
+        // index is fine here — `items` is a fixed-shape array rebuilt fresh
+        // every render, never reordered or filtered by the caller.
+        <Stat key={i} {...item} />
       ))}
     </div>
   );

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 const TABS = [
   { href: "/topics/message-queue", label: "Simulate" },
   { href: "/topics/message-queue/study", label: "Study" },
+  { href: "/topics/message-queue/glossary", label: "Glossary" },
 ];
 
 export default function MessageQueueLayout({ children }: { children: React.ReactNode }) {

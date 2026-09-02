@@ -1,5 +1,7 @@
 import { Button } from "@/components/simulation/button";
+import { Term } from "@/components/study/term";
 
+import { GLOSSARY } from "../_lib/glossary";
 import type { Algorithm, AttackType, ClientState } from "../_lib/types";
 
 const ALGORITHMS: { value: Algorithm; label: string }[] = [
@@ -8,6 +10,14 @@ const ALGORITHMS: { value: Algorithm; label: string }[] = [
   { value: "token-bucket", label: "Token bucket" },
   { value: "leaky-bucket", label: "Leaky bucket" },
 ];
+
+/** Every algorithm value here doubles as its own glossary id — see `_lib/glossary.ts`. */
+const ALGORITHM_GLOSSARY_ID: Record<Algorithm, string> = {
+  "fixed-window": "fixed-window",
+  "sliding-window": "sliding-window",
+  "token-bucket": "token-bucket",
+  "leaky-bucket": "leaky-bucket",
+};
 
 function remaining(client: ClientState, algorithm: Algorithm, limit: number): number {
   switch (algorithm) {
@@ -29,6 +39,8 @@ export function AlgorithmSwitch({
   algorithm: Algorithm;
   onChange: (a: Algorithm) => void;
 }) {
+  const entry = GLOSSARY.find((e) => e.id === ALGORITHM_GLOSSARY_ID[algorithm]);
+
   return (
     <div>
       <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Algorithm</p>
@@ -39,6 +51,11 @@ export function AlgorithmSwitch({
           </Button>
         ))}
       </div>
+      {entry && (
+        <p className="mt-2 text-[11px] leading-relaxed text-text-faint">
+          <Term id={entry.id} glossary={GLOSSARY}>{entry.term}</Term>: {entry.definition}
+        </p>
+      )}
     </div>
   );
 }
@@ -98,7 +115,9 @@ export function LimiterConfig({
 
         {isBucketBased && (
           <label className="flex items-center gap-2 text-[11px] text-text-muted">
-            {algorithm === "token-bucket" ? "refill rate" : "leak rate"}
+            <Term id="refill-rate" glossary={GLOSSARY}>
+              {algorithm === "token-bucket" ? "refill rate" : "leak rate"}
+            </Term>
             <input
               type="range"
               min={1}
@@ -156,7 +175,8 @@ export function TrafficControls({
   );
 }
 
-const ATTACKS: { value: AttackType; label: string; reaches: boolean; description: string }[] = [
+/** `glossaryId` is set only for attacks that also have a full definition in `_lib/glossary.ts`. */
+const ATTACKS: { value: AttackType; label: string; glossaryId?: string; reaches: boolean; description: string }[] = [
   {
     value: "http-flood",
     label: "HTTP Flood",
@@ -166,18 +186,21 @@ const ATTACKS: { value: AttackType; label: string; reaches: boolean; description
   {
     value: "slowloris",
     label: "Slowloris",
+    glossaryId: "slowloris",
     reaches: true,
     description: "Opens connections but never finishes a request — nothing for a request-counting limiter to see, so it bypasses both limiters and ties up raw connection slots instead.",
   },
   {
     value: "syn-flood",
     label: "SYN Flood",
+    glossaryId: "syn-flood",
     reaches: false,
     description: "Never completes a TCP handshake — there's no HTTP request, so it never reaches this diagram's rate limiter at all. Handled by the OS/network stack (SYN cookies, firewalls).",
   },
   {
     value: "udp-amplification",
     label: "UDP Amplification",
+    glossaryId: "udp-amplification",
     reaches: false,
     description: "Pure volumetric traffic aimed at saturating bandwidth upstream of the server — no rate limiter here has any visibility into it. Needs edge/CDN-level scrubbing.",
   },
@@ -210,6 +233,12 @@ export function AttackControls({
         </div>
         {current ? (
           <p className="text-[11px] text-text-muted">
+            {current.glossaryId && (
+              <>
+                <Term id={current.glossaryId} glossary={GLOSSARY}>{current.label}</Term>
+                {" — "}
+              </>
+            )}
             <span className={current.reaches ? "text-status-down" : "text-status-active"}>
               {current.reaches ? "Reaches the limiter — " : "Never reaches the app layer — "}
             </span>
@@ -244,7 +273,9 @@ export function GlobalLimiterConfig({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">Server-wide limiter</p>
+      <p className="text-[11px] font-medium tracking-wide text-text-faint uppercase">
+        <Term id="global-limiter" glossary={GLOSSARY}>Server-wide limiter</Term>
+      </p>
       <div className="mt-2 space-y-2.5 rounded-xl border border-border bg-panel p-3">
         <Button active={active} onClick={() => onSetActive(!active)} className="w-full">
           {active ? "Disable server-wide limit" : "Enable server-wide limit"}
@@ -252,7 +283,7 @@ export function GlobalLimiterConfig({
         {active && (
           <>
             <label className="flex items-center gap-2 text-[11px] text-text-muted">
-              burst capacity
+              <Term id="burst" glossary={GLOSSARY}>burst</Term> capacity
               <input
                 type="range"
                 min={1}

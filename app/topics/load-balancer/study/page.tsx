@@ -19,7 +19,7 @@ const SECTIONS = [
 
 export default function LoadBalancerStudyPage() {
   return (
-    <div className="flex gap-12">
+    <div className="mx-auto flex max-w-[67rem] gap-12">
       <div className="min-w-0 max-w-3xl flex-1 space-y-8">
         <Section title="What a load balancer actually does">
           <p>

@@ -1,7 +1,21 @@
 import type { AttackType, BlockedPacket, RequestPacket } from "../_lib/types";
 
 const VIEW_W = 720;
-const VIEW_H = 420;
+// 30px taller than the routing topology needs, purely for the legend row at
+// the bottom — every node position below is computed off VIEW_H/2, so this
+// stays safe without touching any of them.
+const VIEW_H = 450;
+const LEGEND_Y = VIEW_H - 14;
+
+/** Explains what each request-packet dot color and stroke means — without it the animation is just colored motion. Node-level counters (429 ×, held N/capacity) are already labeled inline, so they don't need a legend entry. */
+const LEGEND_ITEMS: { x: number; color: string; label: string; ring?: boolean }[] = [
+  { x: 20, color: "var(--status-active)", label: "in flight" },
+  { x: 110, color: "var(--status-up)", label: "allowed" },
+  { x: 200, color: "var(--status-down)", label: "limited (429)" },
+  { x: 330, color: "var(--status-warn)", label: "overloaded (503)" },
+  { x: 480, color: "var(--status-down)", label: "attack traffic", ring: true },
+];
+
 const NETWORK_EDGE = { x: 20, y: VIEW_H / 2 };
 const CLIENT = { x: 60, y: VIEW_H / 2 };
 const LIMITER = { x: 330, y: VIEW_H / 2 };
@@ -189,6 +203,23 @@ export function RateLimiterDiagram({
       role="img"
       aria-label="Rate limiter request flow diagram"
     >
+      {/* Legend — dot colors and the attack ring otherwise carry no stated meaning */}
+      <g fontSize={8.5} className="fill-text-faint">
+        {LEGEND_ITEMS.map((item) => (
+          <g key={item.label}>
+            <circle
+              cx={item.x}
+              cy={LEGEND_Y}
+              r={4}
+              fill={item.ring ? "none" : item.color}
+              stroke={item.ring ? item.color : "none"}
+              strokeWidth={item.ring ? 1.5 : 0}
+            />
+            <text x={item.x + 9} y={LEGEND_Y + 3}>{item.label}</text>
+          </g>
+        ))}
+      </g>
+
       {/* Static topology lines */}
       <line x1={CLIENT.x} y1={CLIENT.y} x2={LIMITER.x} y2={LIMITER.y} stroke="var(--border-strong)" strokeWidth={1.5} />
       <line x1={LIMITER.x} y1={LIMITER.y} x2={GLOBAL.x} y2={GLOBAL.y} stroke="var(--border-strong)" strokeWidth={1.5} />

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 const TABS = [
   { href: "/topics/load-balancer", label: "Simulate" },
   { href: "/topics/load-balancer/study", label: "Study" },
+  { href: "/topics/load-balancer/glossary", label: "Glossary" },
 ];
 
 export default function LoadBalancerLayout({ children }: { children: React.ReactNode }) {

@@ -4,7 +4,9 @@ import Link from "next/link";
 
 import { EventLog } from "@/components/simulation/event-log";
 import { StatsBar } from "@/components/simulation/stats-bar";
+import { Term } from "@/components/study/term";
 
+import { GLOSSARY } from "../_lib/glossary";
 import { useLoadBalancerSimulation } from "../_lib/use-simulation";
 import { AlgorithmSwitch, BackendControls, TrafficControls } from "./controls";
 import { LoadBalancerDiagram } from "./diagram";
@@ -21,12 +23,22 @@ export function LoadBalancerSimulation() {
     { label: "success", value: snapshot.stats.success, color: "var(--status-up)" },
     { label: "error", value: snapshot.stats.error, color: "var(--status-down)" },
     { label: "timeout", value: snapshot.stats.timeout, color: "var(--status-warn)" },
-    { label: "rejected", value: snapshot.stats.rejected, color: "var(--status-down)" },
+    {
+      label: <Term id="rejected" glossary={GLOSSARY}>rejected</Term>,
+      value: snapshot.stats.rejected,
+      color: "var(--status-down)",
+    },
   ];
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-panel-raised px-4 py-2.5 text-xs text-text-muted">
+          <span>New here? Hover any underlined word for a quick definition, or</span>
+          <Link href="/topics/load-balancer/study" className="font-medium text-accent hover:underline">
+            start with Study →
+          </Link>
+        </div>
         {showRateLimiterCallout && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-status-down bg-status-down/10 px-4 py-3 text-sm">
             <span className="text-text">
@@ -42,7 +54,7 @@ export function LoadBalancerSimulation() {
           </div>
         )}
         <StatsBar items={statItems} />
-        <div className="h-[420px] shrink-0 rounded-2xl border border-border bg-panel shadow-sm">
+        <div className="h-[450px] shrink-0 rounded-2xl border border-border bg-panel shadow-sm">
           <LoadBalancerDiagram
             algorithm={snapshot.algorithm}
             backends={snapshot.backends}

@@ -44,6 +44,9 @@ export function ResultPanel({ recommendation }: { recommendation: Recommendation
         <ScoreBar label="RabbitMQ" score={rabbitScore} total={total} isLeader={leader === "rabbitmq"} />
         <ScoreBar label="Kafka" score={kafkaScore} total={total} isLeader={leader === "kafka"} />
       </div>
+      <p className="mt-1.5 text-[11px] text-text-faint">
+        Points rank which traits matter most for this workload — not a precise formula.
+      </p>
 
       {reasons.length > 0 ? (
         <ul className="mt-4 space-y-2.5 border-t border-border pt-3 text-sm leading-relaxed text-text-muted">

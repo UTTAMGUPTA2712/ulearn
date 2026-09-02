@@ -1,7 +1,20 @@
 import type { Backend, RequestPacket } from "../_lib/types";
 
 const VIEW_W = 720;
-const VIEW_H = 420;
+// 30px taller than the routing topology needs, purely for the legend row at
+// the bottom — the topology itself keeps every coordinate below unchanged.
+const VIEW_H = 450;
+const LEGEND_Y = VIEW_H - 14;
+
+/** Explains what each request-packet dot color and stroke means — without it the animation is just colored motion. Backend health, by contrast, is already labeled inline at each backend node, so it doesn't need a legend entry. */
+const LEGEND_ITEMS: { x: number; color: string; label: string; ring?: boolean }[] = [
+  { x: 20, color: "var(--status-active)", label: "in flight" },
+  { x: 110, color: "var(--status-warn)", label: "stalled at backend" },
+  { x: 250, color: "var(--status-up)", label: "success" },
+  { x: 340, color: "var(--status-down)", label: "error / rejected" },
+  { x: 480, color: "var(--status-down)", label: "DDoS request", ring: true },
+];
+
 const CLIENT = { x: 60, y: VIEW_H / 2 };
 const LB = { x: 340, y: VIEW_H / 2 };
 const BACKEND_X = 640;
@@ -93,6 +106,23 @@ export function LoadBalancerDiagram({
       role="img"
       aria-label="Load balancer request flow diagram"
     >
+      {/* Legend — dot colors and the DDoS ring otherwise carry no stated meaning */}
+      <g fontSize={8.5} className="fill-text-faint">
+        {LEGEND_ITEMS.map((item) => (
+          <g key={item.label}>
+            <circle
+              cx={item.x}
+              cy={LEGEND_Y}
+              r={4}
+              fill={item.ring ? "none" : item.color}
+              stroke={item.ring ? item.color : "none"}
+              strokeWidth={item.ring ? 1.5 : 0}
+            />
+            <text x={item.x + 9} y={LEGEND_Y + 3}>{item.label}</text>
+          </g>
+        ))}
+      </g>
+
       {/* Static topology lines */}
       <line x1={CLIENT.x} y1={CLIENT.y} x2={LB.x} y2={LB.y} stroke="var(--border-strong)" strokeWidth={1.5} />
       {backends.map((_, i) => {

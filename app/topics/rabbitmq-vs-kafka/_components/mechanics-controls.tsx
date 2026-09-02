@@ -1,5 +1,7 @@
 import { Button } from "@/components/simulation/button";
+import { Term } from "@/components/study/term";
 
+import { GLOSSARY } from "../_lib/glossary";
 import type { KafkaGroup, RabbitConsumer } from "../_lib/mechanics-types";
 
 export function TrafficControls({
@@ -73,8 +75,9 @@ export function RabbitControls({
         </div>
       </div>
       <p className="mt-1.5 text-[11px] leading-relaxed text-text-faint">
-        The broker hands each queued event to the first free worker. Once a worker acks it, it&apos;s
-        deleted — for good.
+        The broker hands each <Term id="queue" glossary={GLOSSARY}>queued</Term> event to the
+        first free worker. Once a worker <Term id="ack" glossary={GLOSSARY}>acks</Term> it,
+        it&apos;s deleted — for good.
       </p>
     </div>
   );
@@ -111,12 +114,13 @@ export function KafkaControls({
         </div>
       </div>
       <p className="mt-1.5 text-[11px] leading-relaxed text-text-faint">
-        Nothing here is ever deleted by a read. A new group starts from the oldest event still in
-        the log — try adding one mid-run.
+        Nothing here is ever deleted by a read. A new{" "}
+        <Term id="consumer-group" glossary={GLOSSARY}>group</Term> starts from the oldest event
+        still in the <Term id="log" glossary={GLOSSARY}>log</Term> — try adding one mid-run.
       </p>
 
       <label className="mt-3 flex items-center gap-2 text-[11px] text-text-muted">
-        retains last
+        <Term id="retention" glossary={GLOSSARY}>retains</Term> last
         <input
           type="range"
           min={4}
@@ -131,7 +135,7 @@ export function KafkaControls({
       <div className="mt-3 space-y-2">
         {groups.map((g) => (
           <label key={g.id} className="flex items-center gap-2 text-[11px] text-text-muted">
-            {g.label} poll rate
+            {g.label} <Term id="poll-rate" glossary={GLOSSARY}>poll rate</Term>
             <input
               type="range"
               min={0}
