@@ -5,6 +5,10 @@
  * stats bar, event log, topic tabs, study-page Section/ConceptCard/
  * ComparisonTable/TableOfContents) live in `components/` and should be
  * reused rather than re-implemented per topic — see docs/DESIGN-SYSTEM.md §10.
+ *
+ * Kept deliberately short: the four shipped simulations, plus the four
+ * planned next. The rest of the topic backlog lives in README.md so this
+ * file stays a build queue, not a wishlist.
  */
 export type Topic = {
   slug: string;
@@ -32,34 +36,12 @@ export const topics: readonly Topic[] = [
     status: "available",
   },
   {
-    slug: "circuit-breaker",
-    title: "Circuit Breaker",
-    tagline: "Open, half-open and closed states protecting a failing dependency.",
-    category: "Resilience",
-    status: "planned",
-  },
-  {
     slug: "message-queue",
     title: "Message Queue",
     tagline:
       "Work queue vs. fan-out pub/sub, backpressure policies, and redelivery — kill a consumer mid-job and watch the visibility timeout, retries and dead-letter queue take over.",
     category: "Async & Messaging",
     status: "available",
-  },
-  {
-    slug: "consistent-hashing",
-    title: "Consistent Hashing",
-    tagline: "Why adding one node shouldn't reshuffle your entire cache.",
-    category: "Data & Caching",
-    status: "planned",
-  },
-  {
-    slug: "redis-protocol",
-    title: "Redis Protocol",
-    tagline:
-      "RESP wire format and pipelining — why a single-threaded event loop can still be this fast.",
-    category: "Data & Caching",
-    status: "planned",
   },
   {
     slug: "rabbitmq-vs-kafka",
@@ -70,43 +52,33 @@ export const topics: readonly Topic[] = [
     status: "available",
   },
   {
-    slug: "resilient-message-handling",
-    title: "Resilient Message Handling",
-    tagline:
-      "Retries, dead-letter queues and idempotency keys — getting a message processed exactly once, not zero or twice.",
-    category: "Async & Messaging",
+    slug: "circuit-breaker",
+    title: "Circuit Breaker",
+    tagline: "Open, half-open and closed states protecting a failing dependency.",
+    category: "Resilience",
     status: "planned",
   },
   {
-    slug: "concurrency-vs-parallelism",
-    title: "Concurrency vs Parallelism vs Multithreading vs Multiprocessing",
-    tagline:
-      "Threads, processes and the GIL — what's actually running at once versus what's just interleaved.",
-    category: "Compute & Concurrency",
+    slug: "consistent-hashing",
+    title: "Consistent Hashing",
+    tagline: "Why adding one node shouldn't reshuffle your entire cache.",
+    category: "Data & Caching",
     status: "planned",
   },
   {
-    slug: "rbac",
-    title: "RBAC",
+    slug: "raft-consensus",
+    title: "Raft Consensus",
     tagline:
-      "Role-based access control for multi-tenant systems — roles, permissions, and where the check actually runs.",
-    category: "Auth & Access",
+      "Leader election, heartbeats and log replication — kill the leader mid-demo and watch the cluster vote in a new one before a single write is lost.",
+    category: "Consistency & Consensus",
     status: "planned",
   },
   {
-    slug: "multi-tenancy",
-    title: "Multi-Tenancy",
+    slug: "retrieval-augmented-generation",
+    title: "Retrieval-Augmented Generation",
     tagline:
-      "Shared schema, siloed schema, or siloed database — isolating tenants without running N copies of your app.",
-    category: "Architecture",
-    status: "planned",
-  },
-  {
-    slug: "socket-io",
-    title: "Socket.IO",
-    tagline:
-      "How Socket.IO actually works — the polling-to-websocket upgrade handshake, rooms, and reconnection.",
-    category: "Traffic & Routing",
+      "Embed a question, pull the nearest chunks from a vector store, and stuff them into the prompt — turn retrieval off and watch the same model start hallucinating an answer instead.",
+    category: "AI & Machine Learning",
     status: "planned",
   },
 ];
