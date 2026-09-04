@@ -4,6 +4,11 @@ import { Container } from "@/components/layout/container";
 import { StatusDot } from "@/components/ui/status-dot";
 import { topics } from "@/lib/topics";
 
+/** Available topics first, planned ones after — stable within each group, so authoring order in `lib/topics.ts` still governs how topics line up next to their category-mates. */
+const sortedTopics = [...topics].sort(
+  (a, b) => Number(b.status === "available") - Number(a.status === "available"),
+);
+
 export default function HomePage() {
   return (
     <Container className="py-14">
@@ -17,7 +22,7 @@ export default function HomePage() {
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        {topics.map((topic) => {
+        {sortedTopics.map((topic) => {
           const isAvailable = topic.status === "available";
           const card = (
             <div
