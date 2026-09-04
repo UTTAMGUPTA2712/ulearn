@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /**
  * Types for the RabbitMQ vs Kafka comparison topic.
  *
@@ -41,8 +43,11 @@ export interface Requirements {
 
 /** One trait's contribution to the recommendation, in plain language, attributed to whichever broker it favors. */
 export interface TraitReason {
+  /** Stable per-trait id ("replay", "routing", ...) — used as the list key since `text` is now JSX, not a primitive. */
+  id: string;
   broker: Broker;
-  text: string;
+  /** JSX so the reasoning can wire jargon through `<Term>`, same as Simulate's control-panel copy. */
+  text: ReactNode;
 }
 
 export interface Recommendation {

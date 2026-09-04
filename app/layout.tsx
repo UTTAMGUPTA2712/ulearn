@@ -20,6 +20,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ulearn/systems",
   description: "Interactive system architecture demonstrations.",
+  verification: {
+    google: "qOFMEPup7MBZiXSACACJJnAz9nus8bYn5TIZiM1CkyA",
+  },
 };
 
 export default function RootLayout({

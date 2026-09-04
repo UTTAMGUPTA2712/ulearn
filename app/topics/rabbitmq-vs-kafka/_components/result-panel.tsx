@@ -51,7 +51,7 @@ export function ResultPanel({ recommendation }: { recommendation: Recommendation
       {reasons.length > 0 ? (
         <ul className="mt-4 space-y-2.5 border-t border-border pt-3 text-sm leading-relaxed text-text-muted">
           {reasons.map((r) => (
-            <li key={r.text} className="flex gap-2">
+            <li key={r.id} className="flex gap-2">
               <span
                 aria-hidden="true"
                 className={cn(

@@ -1,5 +1,7 @@
 import { Button } from "@/components/simulation/button";
+import { Term } from "@/components/study/term";
 
+import { GLOSSARY } from "../_lib/glossary";
 import { SCENARIOS } from "../_lib/scenarios";
 import type {
   ConsumerPattern,
@@ -12,7 +14,8 @@ import type {
 } from "../_lib/types";
 
 type TraitRowProps<T extends string> = {
-  label: string;
+  /** Safe as JSX — rendered in a plain `<p>`, not inside a `Button`. Option labels stay plain strings: they render inside a real `<button>`, where nesting `Term`'s focusable span would be invalid interactive-in-interactive markup. */
+  label: React.ReactNode;
   value: T;
   options: { value: T; label: string }[];
   onChange: (v: T) => void;
@@ -47,7 +50,11 @@ export function RequirementControls({
   return (
     <div className="space-y-3 rounded-xl border border-border bg-panel p-3">
       <TraitRow<ReplayNeed>
-        label="Do consumers ever need to replay history?"
+        label={
+          <>
+            Do consumers ever need to <Term id="replay" glossary={GLOSSARY}>replay</Term> history?
+          </>
+        }
         value={requirements.replay}
         onChange={(v) => set("replay", v)}
         options={[
