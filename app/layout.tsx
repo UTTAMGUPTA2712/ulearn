@@ -19,7 +19,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ulearn/systems",
-  description: "Interactive system architecture demonstrations.",
+  description:
+    "Interactive system architecture demonstrations — load balancers, rate limiters, message queues, and RabbitMQ vs Kafka. Watch each mechanism run live, tweak it, break it on purpose.",
   verification: {
     google: "qOFMEPup7MBZiXSACACJJnAz9nus8bYn5TIZiM1CkyA",
   },
