@@ -17,7 +17,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ulearn-it.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "ulearn/systems",
   description:
     "Interactive system architecture demonstrations — load balancers, rate limiters, message queues, and RabbitMQ vs Kafka. Watch each mechanism run live, tweak it, break it on purpose.",
