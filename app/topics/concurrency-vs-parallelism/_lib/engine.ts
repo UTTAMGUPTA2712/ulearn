@@ -1,369 +1,222 @@
-import type { Core, GilState, LogEntry, Mode, RunStats, SimSnapshot, Task, TaskLeg, WorkloadType } from "./types";
-
-const DEFAULT_CORE_COUNT = 4;
-const MIN_CORES = 1;
-const MAX_CORES = 6;
-
-/** Plain round-robin time slice for the single-core "concurrent" mode — no GIL involved, just interleaving. */
-const CONCURRENT_QUANTUM_MS = 150;
-
-const DEFAULT_GIL_QUANTUM_MS = 200;
-const MIN_GIL_QUANTUM_MS = 100;
-const MAX_GIL_QUANTUM_MS = 500;
-
-const DEFAULT_SPAWN_OVERHEAD_MS = 400;
-const MIN_SPAWN_OVERHEAD_MS = 100;
-const MAX_SPAWN_OVERHEAD_MS = 800;
-
-const CPU_BURST_MIN_MS = 900;
-const CPU_BURST_MAX_MS = 1600;
-const IO_LEG_COUNT = 3;
-const IO_CPU_LEG_MIN_MS = 60;
-const IO_CPU_LEG_MAX_MS = 140;
-const IO_WAIT_MIN_MS = 350;
-const IO_WAIT_MAX_MS = 650;
-
-const DEFAULT_BURST_SIZE = 6;
-const MIN_BURST_SIZE = 2;
-const MAX_BURST_SIZE = 12;
-const MAX_TASKS = 24;
-const MAX_LOG_LINES = 60;
-
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
+import type { LogEntry, Mode, RunStats, SimSnapshot, Task } from "./types";
 
 /**
- * CPU-bound tasks are a single long compute burst. I/O-bound tasks alternate
- * a short "handle the request" burst with a much longer "wait on the
- * network/disk" leg, a few times — a small request/response cycle repeated,
- * not one giant wait.
+ * Fixed, deliberately uneven durations — a couple of quick tasks, a couple
+ * of long ones, mixed rather than sorted — shared across all three screens
+ * so the "different tasks take different amounts of time" point is always
+ * visible, and so Sequential/Concurrent/Parallel are showing literally the
+ * same batch of work, making them a fair comparison rather than three
+ * independent random draws that might happen to look similar.
  */
-function buildLegs(workload: WorkloadType): TaskLeg[] {
-  if (workload === "cpu") {
-    return [{ kind: "cpu", durationMs: randomBetween(CPU_BURST_MIN_MS, CPU_BURST_MAX_MS) }];
-  }
-  const legs: TaskLeg[] = [];
-  for (let i = 0; i < IO_LEG_COUNT; i++) {
-    legs.push({ kind: "cpu", durationMs: randomBetween(IO_CPU_LEG_MIN_MS, IO_CPU_LEG_MAX_MS) });
-    legs.push({ kind: "io", durationMs: randomBetween(IO_WAIT_MIN_MS, IO_WAIT_MAX_MS) });
-  }
-  return legs;
-}
+const TASK_DURATIONS_MS = [1600, 700, 2200, 1000, 1900, 1300];
+const TASK_COUNT = TASK_DURATIONS_MS.length;
+const DEFAULT_WORKER_COUNT = 3;
 
-let taskIdCounter = 0;
+/** How long a task holds the single lane in "concurrent" mode before yielding to the next one — long enough to watch, short enough to read as interleaving rather than sequential handoffs. */
+const CONCURRENT_SLICE_MS = 300;
+
+/**
+ * Brief holds either side of a task's actual progress, so a lane never
+ * snaps directly from "idle" to "mid-progress" or from "mid-progress" to
+ * "gone" — every task visibly starts and visibly finishes instead of just
+ * appearing and disappearing.
+ */
+const STARTING_MS = 220;
+const COMPLETING_MS = 260;
+
+/** Pause after a full batch finishes before the run quietly restarts itself — this is a looping animation, not something a viewer has to click "restart" on. */
+const LOOP_PAUSE_MS = 900;
+
 let logIdCounter = 0;
 
 /**
- * Owns the entire simulated world: every task's scheduling state, the GIL,
- * per-core occupancy and a short event log. Mutated in place on every
- * `tick()` — `getSnapshot()` is the only thing that leaves the engine. See
- * the load-balancer topic's `use-simulation.ts` for why this stays a plain
- * mutable class outside React.
+ * Owns one looping demo run for a single, fixed `Mode` — this topic's
+ * Simulate page is a set of switchable screens (see `simulation.tsx`), each
+ * backed by its own engine instance, rather than one engine whose mode gets
+ * reconfigured through control-panel buttons. There is nothing to
+ * configure here: `mode` and `workerCount` are set once at construction and
+ * the run just plays on a loop. Mutated in place on every `tick()` —
+ * `getSnapshot()` is the only thing that leaves the engine (see the
+ * load-balancer topic's `use-simulation.ts` for why this stays a plain
+ * mutable class outside React).
  *
- * Four independent scheduling algorithms live here, one per `Mode` — see
- * `tickSequential`/`tickConcurrentSingleCore`/`tickMultithreading`/
- * `tickMultiprocessing`. Switching mode, workload, or core count always
- * resets the run: the whole point of this UI is an A/B wall-clock
- * comparison, and letting state leak across an incompatible mode (a
- * `waiting-gil` task surviving into multiprocessing, say) would be both
- * undefined and actively misleading.
+ * Three scheduling models live here, one per `Mode`:
+ * - `sequential` — one lane, strict FIFO. Task 2 doesn't start until task 1
+ *   fully finishes.
+ * - `concurrent` — still one lane, but tasks take turns in short slices
+ *   instead of running to completion — interleaved, never simultaneous.
+ *   Total time is roughly the same as sequential; what changes is that no
+ *   single task blocks all the others from making *some* progress.
+ * - `parallel` — `workerCount` lanes, each genuinely running a task at the
+ *   same instant. More lanes finish the same batch faster.
+ *
+ * That's the entire Rob Pike distinction this page exists to make visible —
+ * concurrency is a change in structure, parallelism is a change in how much
+ * finishes per second.
  */
 export class ConcurrencyEngine {
+  readonly mode: Mode;
+  readonly workerCount: number;
+
   now = 0;
-  mode: Mode = "sequential";
-  workload: WorkloadType = "cpu";
-  coreCount = DEFAULT_CORE_COUNT;
-  gilQuantumMs = DEFAULT_GIL_QUANTUM_MS;
-  spawnOverheadMs = DEFAULT_SPAWN_OVERHEAD_MS;
-  cores: Core[] = [];
   tasks: Task[] = [];
-  gil: GilState = { holderId: null, switches: 0 };
   log: LogEntry[] = [];
   stats: RunStats = this.freshStats();
 
-  /** Round-robin lane counter for multithreading's purely-cosmetic core assignment — see `tickMultithreading`. */
-  private nextLane = 0;
+  /** ms left before the current single-lane holder yields, in "concurrent" mode only. */
+  private sliceRemainingMs = 0;
+  /** ms left before a finished run quietly spawns the next one. */
+  private loopPauseRemainingMs = 0;
 
-  constructor() {
-    this.rebuildCores();
+  constructor(mode: Mode, workerCount: number = DEFAULT_WORKER_COUNT) {
+    this.mode = mode;
+    this.workerCount = mode === "parallel" ? workerCount : 1;
+    this.spawnBurst();
   }
 
   private freshStats(): RunStats {
-    return {
-      spawned: 0,
-      completed: 0,
-      runStartedAt: null,
-      runFinishedAt: null,
-      gilWaitTotalMs: 0,
-      gilSwitches: 0,
-    };
-  }
-
-  private rebuildCores() {
-    this.cores = Array.from({ length: this.coreCount }, (_, id) => ({ id, busyMs: 0 }));
+    return { spawned: 0, completed: 0, runStartedAt: null, runFinishedAt: null };
   }
 
   private addLog(level: LogEntry["level"], message: string) {
     this.log.push({ id: logIdCounter++, time: this.now, level, message });
-    if (this.log.length > MAX_LOG_LINES) this.log.shift();
+    if (this.log.length > 8) this.log.shift();
   }
 
-  private resetRun() {
-    this.tasks = [];
-    this.rebuildCores();
-    this.gil = { holderId: null, switches: 0 };
-    this.stats = this.freshStats();
-    this.nextLane = 0;
-  }
-
-  setMode(mode: Mode) {
-    this.mode = mode;
-    this.resetRun();
-    this.addLog("info", `Mode switched to ${mode} — run reset`);
-  }
-
-  setWorkload(workload: WorkloadType) {
-    this.workload = workload;
-    this.resetRun();
-    this.addLog("info", `Workload switched to ${workload}-bound — run reset`);
-  }
-
-  setCoreCount(n: number) {
-    this.coreCount = Math.max(MIN_CORES, Math.min(MAX_CORES, Math.round(n)));
-    this.resetRun();
-  }
-
-  setGilQuantumMs(ms: number) {
-    this.gilQuantumMs = Math.max(MIN_GIL_QUANTUM_MS, Math.min(MAX_GIL_QUANTUM_MS, ms));
-  }
-
-  setSpawnOverheadMs(ms: number) {
-    this.spawnOverheadMs = Math.max(MIN_SPAWN_OVERHEAD_MS, Math.min(MAX_SPAWN_OVERHEAD_MS, ms));
-  }
-
-  private buildTask(): Task {
-    const id = taskIdCounter++;
-    const legs = buildLegs(this.workload);
+  private buildTask(id: number, totalMs: number): Task {
     return {
       id,
-      workload: this.workload,
-      legs,
-      legIndex: 0,
-      legRemainingMs: legs[0].durationMs,
+      totalMs,
+      remainingMs: totalMs,
       status: "queued",
-      coreId: null,
-      gilSliceRemainingMs: 0,
-      spawnRemainingMs: 0,
-      spawnedAt: this.now,
+      phaseRemainingMs: 0,
+      laneId: null,
       startedAt: null,
       finishedAt: null,
-      hue: (id * 47) % 360,
     };
   }
 
-  /** The primary A/B action: clears any previous run and spawns a fresh batch under the current mode/workload. */
-  spawnBurst(size: number = DEFAULT_BURST_SIZE) {
-    const clamped = Math.max(MIN_BURST_SIZE, Math.min(MAX_BURST_SIZE, Math.round(size)));
-    this.resetRun();
-    this.stats.runStartedAt = this.now;
-    for (let i = 0; i < clamped; i++) this.tasks.push(this.buildTask());
-    this.stats.spawned = clamped;
-    this.addLog("info", `Spawned ${clamped} ${this.workload}-bound tasks under ${this.mode}`);
+  private spawnBurst() {
+    this.now = 0;
+    this.tasks = TASK_DURATIONS_MS.map((ms, i) => this.buildTask(i, ms));
+    this.stats = this.freshStats();
+    this.stats.spawned = TASK_COUNT;
+    this.stats.runStartedAt = 0;
+    this.sliceRemainingMs = 0;
   }
 
-  /** Appends one task without resetting — for exploring backlog behavior once tasks outnumber cores. */
-  addTask() {
-    if (this.tasks.length >= MAX_TASKS) return;
-    if (this.stats.runStartedAt === null) this.stats.runStartedAt = this.now;
-    this.tasks.push(this.buildTask());
-    this.stats.spawned++;
+  private laneCount(): number {
+    return this.mode === "parallel" ? this.workerCount : 1;
   }
 
-  reset() {
-    this.resetRun();
-    this.addLog("info", "Reset");
+  /** Claims a lane for a queued task — it enters `starting`, not `running`, so the lane visibly spins up before progress begins. */
+  private beginTask(task: Task, laneId: number) {
+    task.status = "starting";
+    task.phaseRemainingMs = STARTING_MS;
+    task.laneId = laneId;
+    if (task.startedAt === null) task.startedAt = this.now;
+  }
+
+  private finishTask(task: Task) {
+    task.status = "done";
+    task.laneId = null;
+    task.finishedAt = this.now;
+    this.stats.completed++;
   }
 
   /**
-   * Shared leg-completion handoff. Routes a task that just finished a leg to
-   * whatever it needs next: done, off to I/O, or back into contention for a
-   * CPU leg — the exact "how do I get scheduled again" status depends on the
-   * mode, since each mode's scheduler looks for a different status.
+   * Advances a task already holding a lane through `starting` -> `running`
+   * -> `completing` -> (caller calls `finishTask`). Shared by sequential and
+   * parallel, since neither ever interrupts a task mid-`running` the way
+   * concurrent's round-robin does — see `tickConcurrent` for that case.
+   * Returns `true` once the task is ready to be handed to `finishTask`.
    */
-  private advanceLeg(task: Task) {
-    task.legIndex++;
-    if (task.legIndex >= task.legs.length) {
-      task.status = "done";
-      task.finishedAt = this.now;
-      this.stats.completed++;
-      this.addLog("info", `T${task.id} done in ${Math.round(this.now - task.spawnedAt)}ms`);
-      return;
+  private advanceLane(task: Task, deltaMs: number): boolean {
+    if (task.status === "starting") {
+      task.phaseRemainingMs -= deltaMs;
+      if (task.phaseRemainingMs <= 0) task.status = "running";
+      return false;
     }
-
-    const nextLeg = task.legs[task.legIndex];
-    task.legRemainingMs = nextLeg.durationMs;
-
-    if (nextLeg.kind === "io") {
-      task.status = "waiting-io";
-      return;
+    if (task.status === "running") {
+      task.remainingMs -= deltaMs;
+      if (task.remainingMs <= 0) {
+        task.status = "completing";
+        task.phaseRemainingMs = COMPLETING_MS;
+      }
+      return false;
     }
-
-    // Needs to run a CPU leg again.
-    if (this.mode === "multithreading") {
-      task.status = "waiting-gil"; // must reacquire the GIL
-    } else if (this.mode === "multiprocessing") {
-      task.status = "running"; // still owns its dedicated core — no scheduling decision needed
-    } else {
-      task.status = "queued"; // sequential/concurrent: re-enter the FIFO/round-robin
-    }
+    // completing
+    task.phaseRemainingMs -= deltaMs;
+    return task.phaseRemainingMs <= 0;
   }
 
-  /** Exactly one task active (running or waiting-io) at a time, strict FIFO — the core sits idle through I/O waits too. */
+  /** One lane, strict FIFO — a task runs to completion before the next one starts. */
   private tickSequential(deltaMs: number) {
-    const active = this.tasks.find((t) => t.status === "running" || t.status === "waiting-io");
+    const active = this.tasks.find((t) => t.laneId === 0 && t.status !== "done");
     if (!active) {
       const next = this.tasks.find((t) => t.status === "queued");
-      if (next) {
-        next.status = "running";
-        next.coreId = 0;
-        next.startedAt = this.now;
+      if (next) this.beginTask(next, 0);
+      return;
+    }
+    if (this.advanceLane(active, deltaMs)) this.finishTask(active);
+  }
+
+  /** One lane, round-robin — tasks take short turns instead of running to completion, each turn beginning with the same visible spin-up as a fresh start. */
+  private tickConcurrent(deltaMs: number) {
+    let active = this.tasks.find((t) => t.laneId === 0 && t.status !== "done");
+    if (!active) {
+      const next = this.tasks.find((t) => t.status === "queued");
+      if (!next) return;
+      this.beginTask(next, 0);
+      this.sliceRemainingMs = CONCURRENT_SLICE_MS;
+      active = next;
+    }
+
+    if (active.status === "starting") {
+      active.phaseRemainingMs -= deltaMs;
+      if (active.phaseRemainingMs <= 0) active.status = "running";
+      return;
+    }
+
+    if (active.status === "running") {
+      active.remainingMs -= deltaMs;
+      this.sliceRemainingMs -= deltaMs;
+      if (active.remainingMs <= 0) {
+        active.status = "completing";
+        active.phaseRemainingMs = COMPLETING_MS;
+      } else if (this.sliceRemainingMs <= 0 && this.tasks.some((t) => t.status === "queued")) {
+        active.status = "queued";
+        active.laneId = null;
+        this.addLog("info", `T${active.id}'s turn ended — switching to the next task`);
       }
       return;
     }
 
-    active.legRemainingMs -= deltaMs;
-    if (active.legRemainingMs > 0) return;
-    if (active.status === "running") active.coreId = null; // cleared before advanceLeg may hand it to waiting-io/done
-    this.advanceLeg(active);
+    // completing
+    active.phaseRemainingMs -= deltaMs;
+    if (active.phaseRemainingMs <= 0) this.finishTask(active);
   }
 
-  /** One shared lane, round-robin time-sliced. I/O immediately frees the lane — only CPU legs get sliced. */
-  private tickConcurrentSingleCore(deltaMs: number) {
-    const running = this.tasks.find((t) => t.coreId === 0 && t.status === "running");
-
-    if (!running) {
+  /** `workerCount` lanes, each genuinely running a task at the same instant. */
+  private tickParallel(deltaMs: number) {
+    for (let lane = 0; lane < this.workerCount; lane++) {
+      const occupant = this.tasks.find((t) => t.laneId === lane && t.status !== "done");
+      if (occupant) {
+        if (this.advanceLane(occupant, deltaMs)) this.finishTask(occupant);
+        continue;
+      }
       const next = this.tasks.find((t) => t.status === "queued");
-      if (next) {
-        next.status = "running";
-        next.coreId = 0;
-        if (next.startedAt === null) next.startedAt = this.now;
-        next.gilSliceRemainingMs = CONCURRENT_QUANTUM_MS;
-      }
-    } else {
-      running.legRemainingMs -= deltaMs;
-      running.gilSliceRemainingMs -= deltaMs;
-      if (running.legRemainingMs <= 0) {
-        running.coreId = null;
-        this.advanceLeg(running);
-      } else if (running.gilSliceRemainingMs <= 0 && this.tasks.some((t) => t.status === "queued")) {
-        running.status = "queued";
-        running.coreId = null;
-        this.addLog("info", `T${running.id}'s time slice expired — round-robin yield`);
-      }
-    }
-
-    for (const t of this.tasks) {
-      if (t.status === "waiting-io") {
-        t.legRemainingMs -= deltaMs;
-        if (t.legRemainingMs <= 0) this.advanceLeg(t);
-      }
-    }
-  }
-
-  /**
-   * `coreCount` lanes exist for visual spread, but at most one task is ever
-   * `"running"` engine-wide — enforced by a real GIL. A task's lane is
-   * reassigned fresh (round-robin) every time it acquires the GIL and
-   * cleared the moment it stops running: since only one task can ever be
-   * running at once, this can never collide two live tasks onto one lane —
-   * unlike multiprocessing, where a lane is a task's own dedicated core.
-   */
-  private tickMultithreading(deltaMs: number) {
-    const holder = this.gil.holderId !== null ? (this.tasks.find((t) => t.id === this.gil.holderId) ?? null) : null;
-
-    if (!holder) {
-      const candidate = this.tasks.find(
-        (t) => (t.status === "queued" || t.status === "waiting-gil") && t.legs[t.legIndex].kind === "cpu",
-      );
-      if (candidate) {
-        candidate.status = "running";
-        candidate.coreId = this.nextLane++ % this.coreCount;
-        if (candidate.startedAt === null) candidate.startedAt = this.now;
-        candidate.gilSliceRemainingMs = this.gilQuantumMs;
-        this.gil.holderId = candidate.id;
-        this.gil.switches++;
-        this.stats.gilSwitches++;
-        this.addLog("info", `T${candidate.id} acquired the GIL (core ${candidate.coreId})`);
-      }
-    } else {
-      holder.legRemainingMs -= deltaMs;
-      holder.gilSliceRemainingMs -= deltaMs;
-      if (holder.legRemainingMs <= 0) {
-        holder.coreId = null;
-        this.gil.holderId = null; // release before advancing so the next task can grab it next tick
-        this.advanceLeg(holder);
-      } else if (
-        holder.gilSliceRemainingMs <= 0 &&
-        this.tasks.some(
-          (t) =>
-            t.id !== holder.id &&
-            (t.status === "queued" || t.status === "waiting-gil") &&
-            t.legs[t.legIndex].kind === "cpu",
-        )
-      ) {
-        // Forced yield only when contended — no fake handoffs when nobody's waiting.
-        holder.status = "waiting-gil";
-        holder.coreId = null;
-        this.gil.holderId = null;
-        this.addLog("info", `T${holder.id}'s GIL quantum expired — yielding (contended)`);
-      }
-    }
-
-    for (const t of this.tasks) {
-      if (t.status === "waiting-io") {
-        t.legRemainingMs -= deltaMs;
-        if (t.legRemainingMs <= 0) this.advanceLeg(t); // -> waiting-gil (needs the GIL again) or done
-      }
-    }
-  }
-
-  /**
-   * Each task pinned 1:1 to a core for its whole life once assigned,
-   * including through I/O waits — deliberately: this is what makes
-   * "I/O-bound multiprocessing burns a whole dedicated core at low
-   * busy%" visible without modeling OS preemption of blocked processes.
-   * No GIL involvement at all — every core with a `running` occupant is
-   * truly, simultaneously executing.
-   */
-  private tickMultiprocessing(deltaMs: number) {
-    for (const core of this.cores) {
-      const occupant = this.tasks.find((t) => t.coreId === core.id && t.status !== "done");
-      if (occupant) continue;
-      const next = this.tasks.find((t) => t.status === "queued");
-      if (next) {
-        next.status = "spawning";
-        next.coreId = core.id;
-        next.spawnRemainingMs = this.spawnOverheadMs;
-        this.addLog("info", `P${next.id} spawning on core ${core.id} (+${this.spawnOverheadMs}ms overhead)`);
-      }
-    }
-
-    for (const t of this.tasks) {
-      if (t.status === "spawning") {
-        t.spawnRemainingMs -= deltaMs;
-        if (t.spawnRemainingMs <= 0) {
-          t.status = "running";
-          t.startedAt = this.now;
-        }
-      } else if (t.status === "running" || t.status === "waiting-io") {
-        t.legRemainingMs -= deltaMs;
-        if (t.legRemainingMs <= 0) this.advanceLeg(t); // -> waiting-io (same core) or running (next cpu leg, same core) or done
-      }
+      if (next) this.beginTask(next, lane);
     }
   }
 
   tick(deltaMs: number) {
+    if (this.stats.runFinishedAt !== null) {
+      this.loopPauseRemainingMs -= deltaMs;
+      if (this.loopPauseRemainingMs <= 0) this.spawnBurst();
+      return;
+    }
+
     this.now += deltaMs;
 
     switch (this.mode) {
@@ -371,51 +224,33 @@ export class ConcurrencyEngine {
         this.tickSequential(deltaMs);
         break;
       case "concurrent":
-        this.tickConcurrentSingleCore(deltaMs);
+        this.tickConcurrent(deltaMs);
         break;
-      case "multithreading":
-        this.tickMultithreading(deltaMs);
-        break;
-      case "multiprocessing":
-        this.tickMultiprocessing(deltaMs);
+      case "parallel":
+        this.tickParallel(deltaMs);
         break;
     }
 
-    for (const core of this.cores) {
-      const running = this.tasks.some((t) => t.coreId === core.id && t.status === "running");
-      if (running) core.busyMs += deltaMs;
-    }
-
-    for (const t of this.tasks) {
-      if (t.status === "waiting-gil") this.stats.gilWaitTotalMs += deltaMs;
-    }
-
-    if (this.stats.runFinishedAt === null && this.stats.spawned > 0 && this.tasks.every((t) => t.status === "done")) {
+    if (this.stats.spawned > 0 && this.tasks.every((t) => t.status === "done")) {
       this.stats.runFinishedAt = this.now;
-      const wallClock = Math.round(this.now - (this.stats.runStartedAt ?? this.now));
-      this.addLog("info", `Run finished — ${this.stats.completed}/${this.stats.spawned} tasks done in ${wallClock}ms wall clock`);
+      this.loopPauseRemainingMs = LOOP_PAUSE_MS;
+      this.addLog("info", `Batch finished in ${Math.round(this.now)}ms — starting over`);
     }
   }
 
   getSnapshot(): SimSnapshot {
     const runStartedAt = this.stats.runStartedAt;
     const wallClockMs = runStartedAt === null ? 0 : (this.stats.runFinishedAt ?? this.now) - runStartedAt;
-    const coreBusyPct = this.cores.map((c) => (wallClockMs > 0 ? (c.busyMs / wallClockMs) * 100 : 0));
 
     return {
       now: this.now,
       mode: this.mode,
-      workload: this.workload,
-      coreCount: this.coreCount,
-      gilQuantumMs: this.gilQuantumMs,
-      spawnOverheadMs: this.spawnOverheadMs,
-      cores: this.cores.map((c) => ({ ...c })),
+      laneCount: this.laneCount(),
+      workerCount: this.workerCount,
       tasks: this.tasks.map((t) => ({ ...t })),
-      gil: { ...this.gil },
       log: [...this.log],
       stats: { ...this.stats },
       wallClockMs,
-      coreBusyPct,
     };
   }
 }

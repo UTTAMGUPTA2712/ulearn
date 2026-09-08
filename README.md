@@ -87,7 +87,7 @@ Full guide: [`docs/CONTENT-AUTHORING.md`](./docs/CONTENT-AUTHORING.md).
 
 ## Topics roadmap
 
-Four simulations are live today, four more are queued next in
+Five simulations are live today, four more are queued next in
 [`lib/topics.ts`](./lib/topics.ts). Beyond those, here's the backlog —
 names only, unsorted by priority:
 
@@ -99,7 +99,7 @@ names only, unsorted by priority:
 - **Consistency & Consensus** — CAP Theorem, 2PC vs Saga, Gossip Protocol, Quorum Reads & Writes
 - **Observability** — Distributed Tracing
 - **AI & Machine Learning** — How LLMs Generate Text, Vector Search & ANN Indexes, LLM Inference & KV Cache
-- **Compute & Concurrency** — Concurrency vs Parallelism vs Multithreading vs Multiprocessing, Autoscaling
+- **Compute & Concurrency** — Autoscaling
 - **Auth & Access** — RBAC
 - **Architecture** — Multi-Tenancy, Blue-Green & Canary Deployments
 

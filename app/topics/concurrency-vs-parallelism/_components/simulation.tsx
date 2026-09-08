@@ -2,70 +2,66 @@
 
 import { useState } from "react";
 
-import { EventLog } from "@/components/simulation/event-log";
-import { StatsBar } from "@/components/simulation/stats-bar";
+import { Button } from "@/components/simulation/button";
 
-import { useConcurrencySimulation } from "../_lib/use-simulation";
-import { AdvancedConfig, CoreCountControl, ModeSwitch, TaskBurstControls, TaskGrid, WorkloadToggle } from "./controls";
-import { ConcurrencyDiagram } from "./diagram";
+import { MemoryScreen } from "./memory-screen";
+import { TaskFlowScreen } from "./task-flow-screen";
 
+type ScreenId = "sequential" | "concurrent" | "parallel" | "multithreading" | "multiprocessing";
+
+const SCREENS: { id: ScreenId; label: string }[] = [
+  { id: "sequential", label: "Sequential" },
+  { id: "concurrent", label: "Concurrent" },
+  { id: "parallel", label: "Parallel" },
+  { id: "multithreading", label: "Multithreading" },
+  { id: "multiprocessing", label: "Multiprocessing" },
+];
+
+/**
+ * Five self-playing screens instead of one simulation behind a control
+ * panel. Each screen is its own component with its own looping animation —
+ * switching screens is the only interaction this page asks for; nothing on
+ * a screen itself is a button, slider or toggle. `key={screen}` forces a
+ * clean remount (and so a fresh loop) every time the reader switches.
+ */
 export function ConcurrencySimulation() {
-  const {
-    snapshot,
-    reducedMotion,
-    setMode,
-    setWorkload,
-    setCoreCount,
-    setGilQuantumMs,
-    setSpawnOverheadMs,
-    spawnBurst,
-    addTask,
-    reset,
-  } = useConcurrencySimulation();
-  const [burstSize, setBurstSize] = useState(6);
+  const [screen, setScreen] = useState<ScreenId>("sequential");
+  const index = SCREENS.findIndex((s) => s.id === screen);
 
-  const statItems = [
-    { label: "wall clock", value: `${(snapshot.wallClockMs / 1000).toFixed(2)}s` },
-    { label: "completed", value: `${snapshot.stats.completed}/${snapshot.stats.spawned}` },
-    { label: "GIL wait total", value: `${(snapshot.stats.gilWaitTotalMs / 1000).toFixed(2)}s`, color: "var(--status-warn)" },
-    { label: "GIL handoffs", value: snapshot.stats.gilSwitches },
-  ];
+  const goTo = (i: number) => setScreen(SCREENS[Math.max(0, Math.min(SCREENS.length - 1, i))].id);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-      <div className="flex flex-col gap-4">
-        <StatsBar items={statItems} />
-        <div className="h-[420px] shrink-0 rounded-2xl border border-border bg-panel shadow-sm">
-          <ConcurrencyDiagram
-            mode={snapshot.mode}
-            coreCount={snapshot.coreCount}
-            tasks={snapshot.tasks}
-            gil={snapshot.gil}
-            coreBusyPct={snapshot.coreBusyPct}
-            reducedMotion={reducedMotion}
-          />
-        </div>
-        <TaskGrid tasks={snapshot.tasks} />
-        <EventLog className="flex flex-1 flex-col" entries={snapshot.log} />
+    // The diagrams' viewBox is a fixed, moderate aspect ratio — without this cap, `Container`'s
+    // fluid full-bleed width (see components/layout/container.tsx) stretches this block far wider
+    // than the SVGs are drawn for, and the browser letterboxes them instead of filling the space.
+    <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
+      <div className="flex flex-wrap gap-1.5">
+        {SCREENS.map((s, i) => (
+          <Button key={s.id} active={s.id === screen} onClick={() => setScreen(s.id)}>
+            <span className="mr-1.5 font-mono text-[10px] text-text-faint">{i + 1}</span>
+            {s.label}
+          </Button>
+        ))}
       </div>
 
-      <div className="flex flex-col gap-6">
-        <ModeSwitch mode={snapshot.mode} onChange={setMode} />
-        <WorkloadToggle workload={snapshot.workload} onChange={setWorkload} />
-        <CoreCountControl mode={snapshot.mode} coreCount={snapshot.coreCount} onChange={setCoreCount} />
-        <AdvancedConfig
-          gilQuantumMs={snapshot.gilQuantumMs}
-          spawnOverheadMs={snapshot.spawnOverheadMs}
-          onSetGilQuantumMs={setGilQuantumMs}
-          onSetSpawnOverheadMs={setSpawnOverheadMs}
-        />
-        <TaskBurstControls
-          burstSize={burstSize}
-          onSetBurstSize={setBurstSize}
-          onRunBurst={() => spawnBurst(burstSize)}
-          onAddTask={addTask}
-          onReset={reset}
-        />
+      <div key={screen}>
+        {screen === "sequential" && <TaskFlowScreen mode="sequential" />}
+        {screen === "concurrent" && <TaskFlowScreen mode="concurrent" />}
+        {screen === "parallel" && <TaskFlowScreen mode="parallel" />}
+        {screen === "multithreading" && <MemoryScreen kind="threads" />}
+        {screen === "multiprocessing" && <MemoryScreen kind="processes" />}
+      </div>
+
+      <div className="flex items-center justify-between border-t border-border pt-3">
+        <Button onClick={() => goTo(index - 1)} disabled={index === 0}>
+          ← Previous
+        </Button>
+        <span className="text-xs text-text-faint">
+          {index + 1} / {SCREENS.length}
+        </span>
+        <Button onClick={() => goTo(index + 1)} disabled={index === SCREENS.length - 1}>
+          Next →
+        </Button>
       </div>
     </div>
   );

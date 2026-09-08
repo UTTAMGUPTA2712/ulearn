@@ -20,7 +20,8 @@ export default function ConcurrencyLayout({ children }: { children: React.ReactN
         Concurrency vs Parallelism vs Multithreading vs Multiprocessing
       </h1>
       <p className="mt-1 max-w-2xl text-sm text-text-muted">
-        Threads, processes and the GIL — what&apos;s actually running at once versus what&apos;s just interleaved.
+        Dealing with a lot of things at once, versus doing a lot of things at once — and the two ways to build
+        either one.
       </p>
 
       <div className="mt-6">

@@ -52,6 +52,14 @@ export const topics: readonly Topic[] = [
     status: "available",
   },
   {
+    slug: "concurrency-vs-parallelism",
+    title: "Concurrency vs Parallelism",
+    tagline:
+      "Dealing with a lot of things at once vs. doing a lot of things at once — switch from Sequential to Parallel and watch the wall clock actually drop instead of just interleaving.",
+    category: "Compute & Concurrency",
+    status: "planned",
+  },
+  {
     slug: "circuit-breaker",
     title: "Circuit Breaker",
     tagline: "Open, half-open and closed states protecting a failing dependency.",

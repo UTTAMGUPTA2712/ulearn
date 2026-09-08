@@ -1,66 +1,42 @@
 /**
  * Types for the concurrency/parallelism simulation. Colocated with this
  * topic's route on purpose — nothing here is shared with other topics.
+ *
+ * Deliberately simple: this topic's job is to make the Rob Pike distinction
+ * ("dealing with a lot of things at once" vs "doing a lot of things at
+ * once") visible in one glance, not to model a real scheduler. See
+ * `engine.ts` for why there's no GIL, no I/O legs, no per-core busy% here —
+ * an earlier version of this simulation modeled all of that and it made the
+ * page harder to read, not easier.
  */
 
-/** The four scheduling models the simulator can run. */
-export type Mode = "sequential" | "concurrent" | "multithreading" | "multiprocessing";
-
-/** CPU-bound tasks are one long compute burst; I/O-bound tasks alternate short compute with long waits. */
-export type WorkloadType = "cpu" | "io";
+/** The three things being compared — matches the Simulate page's mode switch 1:1. */
+export type Mode = "sequential" | "concurrent" | "parallel";
 
 /**
- * `queued` — spawned but never yet scheduled.
- * `spawning` — multiprocessing only: paying the one-time process-startup cost.
- * `running` — actually executing on a core right now.
- * `waiting-io` — off doing I/O (network/disk), not occupying any core.
- * `waiting-gil` — multithreading only: has a CPU leg ready to go but doesn't hold the GIL.
- * `done` — finished all its legs.
+ * `queued` — hasn't started yet.
+ * `starting` — just claimed a lane, brief spin-up before it begins actually
+ * making progress. Exists so a task never snaps straight from idle chip to
+ * mid-progress bar — see `engine.ts`'s `STARTING_MS`.
+ * `running` — actively making progress right now, in some lane.
+ * `completing` — done making progress, holding a brief "finished" beat
+ * before it's removed from the lane — see `COMPLETING_MS`.
+ * `done` — finished.
  */
-export type TaskStatus = "queued" | "spawning" | "running" | "waiting-io" | "waiting-gil" | "done";
-
-export interface TaskLeg {
-  kind: "cpu" | "io";
-  durationMs: number;
-}
+export type TaskStatus = "queued" | "starting" | "running" | "completing" | "done";
 
 export interface Task {
   id: number;
-  workload: WorkloadType;
-  legs: TaskLeg[];
-  legIndex: number;
-  /** ms left in the current leg — decremented only while the task is actively progressing, so a preempted task resumes where it left off. */
-  legRemainingMs: number;
+  totalMs: number;
+  /** ms of work left — decremented only while `running`, so a paused (queued) task resumes where it left off. */
+  remainingMs: number;
   status: TaskStatus;
-  /**
-   * The lane this task is drawn in. Only meaningful while `running`/`spawning`
-   * — sequential/concurrent/multithreading clear it the moment a task stops
-   * running (there's nothing to visually "own" while blocked). Multiprocessing
-   * is the one exception: a process keeps its core for its whole life, I/O
-   * waits included, which is exactly what makes an I/O-bound process burning
-   * a whole dedicated core at low utilization visible.
-   */
-  coreId: number | null;
-  /** Multithreading: ms left before a forced GIL yield. Concurrent: reused as the plain round-robin time-slice remaining. */
-  gilSliceRemainingMs: number;
-  /** Multiprocessing only: ms left in the one-time process-spawn cost. */
-  spawnRemainingMs: number;
-  spawnedAt: number;
+  /** ms left in the current `starting`/`completing` phase. Unused (0) in every other status. */
+  phaseRemainingMs: number;
+  /** Which lane currently holds this task. Null once it's back in the queue or finished. */
+  laneId: number | null;
   startedAt: number | null;
   finishedAt: number | null;
-  /** Stable per-task color identity `(id * 47) % 360` — used only for label text, never a shape fill (fills stay on the token palette). */
-  hue: number;
-}
-
-export interface Core {
-  id: number;
-  busyMs: number;
-}
-
-export interface GilState {
-  holderId: number | null;
-  /** Cumulative handoffs this run — surfaced as a stat/log, not just an animation. */
-  switches: number;
 }
 
 export interface LogEntry {
@@ -76,24 +52,18 @@ export interface RunStats {
   runStartedAt: number | null;
   /** null while the run is still in progress. */
   runFinishedAt: number | null;
-  gilWaitTotalMs: number;
-  gilSwitches: number;
 }
 
 export interface SimSnapshot {
   now: number;
   mode: Mode;
-  workload: WorkloadType;
-  coreCount: number;
-  gilQuantumMs: number;
-  spawnOverheadMs: number;
-  cores: Core[];
+  /** Number of lanes currently drawn — 1 for sequential/concurrent, `workerCount` for parallel. */
+  laneCount: number;
+  /** How many lanes "parallel" mode uses — the one control this simulation exposes. */
+  workerCount: number;
   tasks: Task[];
-  gil: GilState;
   log: LogEntry[];
   stats: RunStats;
   /** Derived: `(runFinishedAt ?? now) - runStartedAt`, or 0 before a run has started. */
   wallClockMs: number;
-  /** Derived per-core busy percentage over the `wallClockMs` window. */
-  coreBusyPct: number[];
 }
