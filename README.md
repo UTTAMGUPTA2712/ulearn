@@ -87,18 +87,18 @@ Full guide: [`docs/CONTENT-AUTHORING.md`](./docs/CONTENT-AUTHORING.md).
 
 ## Topics roadmap
 
-Five simulations are live today, four more are queued next in
+A handful of simulations are live today, more are queued next in
 [`lib/topics.ts`](./lib/topics.ts). Beyond those, here's the backlog —
 names only, unsorted by priority:
 
 - **Traffic & Routing** — Socket.IO, CDN & Edge Caching
 - **Resilience** — Distributed Locks
 - **Async & Messaging** — Resilient Message Handling, Change Data Capture & Outbox
-- **Data & Caching** — Redis Protocol, Database Replication, Database Sharding, Bloom Filter, Merkle Trees
+- **Data & Caching** — Redis Protocol, Database Replication, Database Sharding, Merkle Trees
 - **Databases** — SQL vs NoSQL, Database Indexing, ACID & Isolation Levels, Row vs Column Storage
 - **Consistency & Consensus** — CAP Theorem, 2PC vs Saga, Gossip Protocol, Quorum Reads & Writes
 - **Observability** — Distributed Tracing
-- **AI & Machine Learning** — How LLMs Generate Text, Vector Search & ANN Indexes, LLM Inference & KV Cache
+- **AI & Machine Learning** — Retrieval-Augmented Generation, How LLMs Generate Text, Vector Search & ANN Indexes, LLM Inference & KV Cache
 - **Compute & Concurrency** — Autoscaling
 - **Auth & Access** — RBAC
 - **Architecture** — Multi-Tenancy, Blue-Green & Canary Deployments

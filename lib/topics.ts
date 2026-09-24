@@ -6,7 +6,7 @@
  * ComparisonTable/TableOfContents) live in `components/` and should be
  * reused rather than re-implemented per topic — see docs/DESIGN-SYSTEM.md §10.
  *
- * Kept deliberately short: the four shipped simulations, plus the four
+ * Kept deliberately short: the shipped simulations, plus the handful
  * planned next. The rest of the topic backlog lives in README.md so this
  * file stays a build queue, not a wishlist.
  */
@@ -67,9 +67,26 @@ export const topics: readonly Topic[] = [
     status: "planned",
   },
   {
+    slug: "hashing",
+    title: "Hashing & Collisions",
+    tagline:
+      "Hash functions, buckets and collisions — pile keys into a table, switch between chaining and open addressing, then plug in a bad hash and watch every key crowd into one bucket.",
+    category: "Data & Caching",
+    status: "planned",
+  },
+  {
     slug: "consistent-hashing",
     title: "Consistent Hashing",
-    tagline: "Why adding one node shouldn't reshuffle your entire cache.",
+    tagline:
+      "Modulo vs. the ring — add one cache server and watch hash % N reshuffle almost every key, then switch to a ring with virtual nodes and watch only a sliver move.",
+    category: "Data & Caching",
+    status: "planned",
+  },
+  {
+    slug: "bloom-filter",
+    title: "Bloom Filter",
+    tagline:
+      "k hashes, m bits, zero false negatives — skip the database for keys that definitely don't exist, then overfill the array and watch keys you never added come back as 'probably present'.",
     category: "Data & Caching",
     status: "planned",
   },
@@ -79,14 +96,6 @@ export const topics: readonly Topic[] = [
     tagline:
       "Leader election, heartbeats and log replication — kill the leader mid-demo and watch the cluster vote in a new one before a single write is lost.",
     category: "Consistency & Consensus",
-    status: "planned",
-  },
-  {
-    slug: "retrieval-augmented-generation",
-    title: "Retrieval-Augmented Generation",
-    tagline:
-      "Embed a question, pull the nearest chunks from a vector store, and stuff them into the prompt — turn retrieval off and watch the same model start hallucinating an answer instead.",
-    category: "AI & Machine Learning",
     status: "planned",
   },
 ];
