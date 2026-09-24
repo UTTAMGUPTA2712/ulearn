@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { ConcurrencyEngine } from "./engine";
 import type { Mode, SimSnapshot } from "./types";
-import { usePrefersReducedMotion } from "./use-reduced-motion";
+import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 
 /** Caps how big a single tick's delta can be after the tab was backgrounded. */
 const MAX_DELTA_MS = 100;

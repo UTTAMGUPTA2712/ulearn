@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrefersReducedMotion } from "../_lib/use-reduced-motion";
+import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 
 type MemoryKind = "threads" | "processes";
 

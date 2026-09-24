@@ -15,9 +15,9 @@ function getSnapshot() {
 }
 
 /**
- * Shared by every looping animation on this topic's screens — the tick-based
- * ones (`use-simulation.ts`) and the purely decorative ones (the
- * Multithreading/Multiprocessing screens) alike. `useSyncExternalStore`
+ * Shared by every topic whose simulation animates — tick-based engines pass
+ * it through to skip their travel phases, purely decorative loops use it to
+ * drop their pulse. `useSyncExternalStore`
  * (rather than a `useEffect` + `setState`) is the React-idiomatic way to
  * subscribe to this kind of external browser state.
  */

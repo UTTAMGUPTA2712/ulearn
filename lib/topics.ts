@@ -72,7 +72,7 @@ export const topics: readonly Topic[] = [
     tagline:
       "Hash functions, buckets and collisions — pile keys into a table, switch between chaining and open addressing, then plug in a bad hash and watch every key crowd into one bucket.",
     category: "Data & Caching",
-    status: "planned",
+    status: "available",
   },
   {
     slug: "consistent-hashing",
