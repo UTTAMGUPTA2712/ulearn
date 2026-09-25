@@ -4,10 +4,9 @@ import { ConceptCard } from "@/components/study/concept-card";
 import { Section } from "@/components/study/section";
 
 import { GLOSSARY } from "../_lib/glossary";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Hashing & Collisions · Glossary",
-};
+export const metadata: Metadata = topicMetadata("hashing", "glossary");
 
 /** Same terms as `GLOSSARY`, just grouped for a readable full-list page — the `<Term>` popovers elsewhere don't care about grouping, only about the id. */
 const GROUPS: { title: string; ids: string[] }[] = [

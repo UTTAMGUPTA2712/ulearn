@@ -4,10 +4,9 @@ import { ComparisonTable } from "@/components/study/comparison-table";
 import { ConceptCard } from "@/components/study/concept-card";
 import { Section } from "@/components/study/section";
 import { TableOfContents } from "@/components/study/table-of-contents";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Rate Limiter · Study",
-};
+export const metadata: Metadata = topicMetadata("rate-limiter", "study");
 
 const SECTIONS = [
   "What a rate limiter actually does",

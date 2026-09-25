@@ -9,7 +9,7 @@ import { topics } from "@/lib/topics";
  * links shared to LinkedIn/Slack/etc. show a real preview image again
  * instead of just a title + domain badge.
  */
-export const alt = "ulearn/systems — Interactive system architecture demonstrations";
+export const alt = "ulearn — Interactive system design simulations";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

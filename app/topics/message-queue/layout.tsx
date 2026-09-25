@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-
 import { Container } from "@/components/layout/container";
+import { JsonLd } from "@/components/seo/json-ld";
 import { TopicTabs } from "@/components/topic/topic-tabs";
-
-export const metadata: Metadata = {
-  title: "Message Queue",
-};
+import { topicJsonLd } from "@/lib/seo";
 
 const TABS = [
   { href: "/topics/message-queue", label: "Simulate" },
@@ -16,6 +12,7 @@ const TABS = [
 export default function MessageQueueLayout({ children }: { children: React.ReactNode }) {
   return (
     <Container className="py-10">
+      <JsonLd data={topicJsonLd("message-queue")} />
       <p className="text-xs font-medium text-text-faint">topics / async-messaging</p>
       <h1 className="mt-1 text-xl font-semibold tracking-tight text-text">Message Queue</h1>
       <p className="mt-1 max-w-2xl text-sm text-text-muted">

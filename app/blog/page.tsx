@@ -5,7 +5,10 @@ import { Container } from "@/components/layout/container";
 import { fetchMediumPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
-  title: "Blog",
+  title: "Blog – System Design Articles",
+  description:
+    "Articles on system design and backend engineering — the write-ups behind ulearn's interactive simulations.",
+  alternates: { canonical: "/blog" },
 };
 
 function formatDate(iso: string) {

@@ -4,10 +4,9 @@ import { ComparisonTable } from "@/components/study/comparison-table";
 import { ConceptCard } from "@/components/study/concept-card";
 import { Section } from "@/components/study/section";
 import { TableOfContents } from "@/components/study/table-of-contents";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Load Balancer · Study",
-};
+export const metadata: Metadata = topicMetadata("load-balancer", "study");
 
 const SECTIONS = [
   "What a load balancer actually does",

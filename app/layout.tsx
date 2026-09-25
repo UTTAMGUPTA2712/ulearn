@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 
 import { TopNav } from "@/components/layout/top-nav";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/seo";
 import { themeInitScript } from "@/lib/theme";
 
 import "./globals.css";
@@ -17,13 +18,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ulearn-it.vercel.app";
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "ulearn/systems",
-  description:
-    "Interactive system architecture demonstrations — load balancers, rate limiters, message queues, and RabbitMQ vs Kafka. Watch each mechanism run live, tweak it, break it on purpose.",
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   verification: {
     google: "qOFMEPup7MBZiXSACACJJnAz9nus8bYn5TIZiM1CkyA",
   },

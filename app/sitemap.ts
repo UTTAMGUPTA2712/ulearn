@@ -3,9 +3,9 @@ import { join } from "node:path";
 
 import type { MetadataRoute } from "next";
 
+import { SITE_URL } from "@/lib/seo";
 import { topics } from "@/lib/topics";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ulearn-it.vercel.app";
 
 /**
  * Sub-route folders under a topic directory that are real pages, not

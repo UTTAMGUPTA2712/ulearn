@@ -4,10 +4,9 @@ import { ComparisonTable } from "@/components/study/comparison-table";
 import { ConceptCard } from "@/components/study/concept-card";
 import { Section } from "@/components/study/section";
 import { TableOfContents } from "@/components/study/table-of-contents";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Concurrency vs Parallelism · Study",
-};
+export const metadata: Metadata = topicMetadata("concurrency-vs-parallelism", "study");
 
 const SECTIONS = ["Concurrency vs parallelism", "Multithreading", "Multiprocessing", "Threads vs processes", "The bottom line"];
 

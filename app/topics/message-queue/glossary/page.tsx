@@ -4,10 +4,9 @@ import { ConceptCard } from "@/components/study/concept-card";
 import { Section } from "@/components/study/section";
 
 import { GLOSSARY } from "../_lib/glossary";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Message Queue · Glossary",
-};
+export const metadata: Metadata = topicMetadata("message-queue", "glossary");
 
 export default function MessageQueueGlossaryPage() {
   return (

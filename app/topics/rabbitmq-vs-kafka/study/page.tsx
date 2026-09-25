@@ -7,10 +7,9 @@ import { TableOfContents } from "@/components/study/table-of-contents";
 
 import { SCENARIOS } from "../_lib/scenarios";
 import { ScenarioCard } from "../_components/scenario-card";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "RabbitMQ vs Kafka · Study",
-};
+export const metadata: Metadata = topicMetadata("rabbitmq-vs-kafka", "study");
 
 const SECTIONS = [
   "Two different ideas of what a broker is",

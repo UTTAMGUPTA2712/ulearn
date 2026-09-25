@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
+import { JsonLd } from "@/components/seo/json-ld";
 import { StatusDot } from "@/components/ui/status-dot";
+import { siteJsonLd } from "@/lib/seo";
 import { topics } from "@/lib/topics";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 /** Available topics first, planned ones after — stable within each group, so authoring order in `lib/topics.ts` still governs how topics line up next to their category-mates. */
 const sortedTopics = [...topics].sort(
@@ -12,6 +19,7 @@ const sortedTopics = [...topics].sort(
 export default function HomePage() {
   return (
     <Container className="py-14">
+      <JsonLd data={siteJsonLd()} />
       <h1 className="text-2xl font-semibold tracking-tight text-text sm:text-3xl">
         System architectures, taken apart live
       </h1>

@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-
 import { Container } from "@/components/layout/container";
+import { JsonLd } from "@/components/seo/json-ld";
 import { TopicTabs } from "@/components/topic/topic-tabs";
-
-export const metadata: Metadata = {
-  title: "Concurrency vs Parallelism",
-};
+import { topicJsonLd } from "@/lib/seo";
 
 const TABS = [
   { href: "/topics/concurrency-vs-parallelism", label: "Simulate" },
@@ -15,6 +11,7 @@ const TABS = [
 export default function ConcurrencyLayout({ children }: { children: React.ReactNode }) {
   return (
     <Container className="py-10">
+      <JsonLd data={topicJsonLd("concurrency-vs-parallelism")} />
       <p className="text-xs font-medium text-text-faint">topics / compute-concurrency</p>
       <h1 className="mt-1 text-xl font-semibold tracking-tight text-text">
         Concurrency vs Parallelism vs Multithreading vs Multiprocessing

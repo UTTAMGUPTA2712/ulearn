@@ -6,10 +6,9 @@ import { Section } from "@/components/study/section";
 import { TableOfContents } from "@/components/study/table-of-contents";
 import { TopicLink } from "@/components/topic/topic-link";
 import { fnv1a } from "@/lib/hashing";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Hashing & Collisions · Study",
-};
+export const metadata: Metadata = topicMetadata("hashing", "study");
 
 const SECTIONS = [
   "The problem: finding one key among thousands",

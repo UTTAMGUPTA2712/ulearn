@@ -4,10 +4,9 @@ import { ConceptCard } from "@/components/study/concept-card";
 import { Section } from "@/components/study/section";
 
 import { GLOSSARY } from "../_lib/glossary";
+import { topicMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Load Balancer · Glossary",
-};
+export const metadata: Metadata = topicMetadata("load-balancer", "glossary");
 
 export default function LoadBalancerGlossaryPage() {
   return (
