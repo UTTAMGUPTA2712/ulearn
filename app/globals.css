@@ -69,6 +69,23 @@
   --hash-5: #7dd3fc;
   --hash-6: #e0a0bc;
 
+  /*
+   * Categorical palette for Consistent Hashing's physical nodes (N0…N9) —
+   * a data encoding (§4), not decoration. The first six match --hash-*;
+   * like them, none is accent blue, status green or status red. Every
+   * use also prints the node's label, so color is never the only cue.
+   */
+  --node-0: #f472b6;
+  --node-1: #fb923c;
+  --node-2: #c084fc;
+  --node-3: #d6b98c;
+  --node-4: #7dd3fc;
+  --node-5: #e0a0bc;
+  --node-6: #a5b4fc;
+  --node-7: #f0abfc;
+  --node-8: #cbd5e1;
+  --node-9: #c08457;
+
   color-scheme: dark;
 }
 
@@ -98,6 +115,17 @@
   --hash-4: #8a6d3b;
   --hash-5: #0369a1;
   --hash-6: #9d4b6b;
+
+  --node-0: #be185d;
+  --node-1: #c2410c;
+  --node-2: #7e22ce;
+  --node-3: #8a6d3b;
+  --node-4: #0369a1;
+  --node-5: #9d4b6b;
+  --node-6: #4f46e5;
+  --node-7: #a21caf;
+  --node-8: #475569;
+  --node-9: #9a3412;
 
   color-scheme: light;
 }

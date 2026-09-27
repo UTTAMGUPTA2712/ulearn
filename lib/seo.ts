@@ -6,7 +6,7 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ulearn-it.v
 export const SITE_NAME = "ulearn";
 export const SITE_TITLE = "ulearn – Interactive System Design Simulations";
 export const SITE_DESCRIPTION =
-  "ulearn teaches system design with live, interactive simulations — load balancers, rate limiters, message queues, RabbitMQ vs Kafka, hashing and Bloom filters. Watch each mechanism run, tweak it, break it on purpose.";
+  "ulearn teaches system design with live, interactive simulations — load balancers, rate limiters, message queues, RabbitMQ vs Kafka, hashing, consistent hashing and Bloom filters. Watch each mechanism run, tweak it, break it on purpose.";
 
 export type TopicTab = "simulate" | "study" | "glossary" | "match";
 
@@ -79,6 +79,15 @@ const TOPIC_SEO: Record<string, TopicSeo> = {
     studyDescription:
       "How hash functions and hash tables work: why collisions are unavoidable, chaining vs open addressing, load factor and resizing, and where hashing shows up in real systems.",
     teaches: ["Hash functions", "Hash tables", "Hash collisions", "Separate chaining", "Open addressing"],
+  },
+  "consistent-hashing": {
+    simulateTitle: "Consistent Hashing Simulator – Hash Ring vs Modulo & Virtual Nodes",
+    simulateDescription:
+      "Interactive consistent hashing simulation. Kill a node in a sharded cache and watch hash % N remap most keys into a database stampede, then do it on a hash ring and watch only 1/N move. Tune virtual nodes to smooth out hot spots.",
+    studyTitle: "Consistent Hashing Explained – Hash Rings, Virtual Nodes & Rendezvous Hashing",
+    studyDescription:
+      "How consistent hashing works: why hash % N causes cache stampedes, the hash ring and K/N minimal disruption, virtual nodes, rendezvous hashing vs range partitioning, and how Discord and DynamoDB use it.",
+    teaches: ["Consistent hashing", "Hash ring", "Virtual nodes", "Rendezvous hashing", "Cache stampede"],
   },
   "bloom-filter": {
     simulateTitle: "Bloom Filter Simulator – False Positives, Bit Arrays & Disk Seeks",

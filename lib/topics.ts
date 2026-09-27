@@ -78,7 +78,7 @@ export const topics: readonly Topic[] = [
     slug: "consistent-hashing",
     title: "Consistent Hashing",
     tagline:
-      "Modulo vs. the ring — add one cache server and watch hash % N reshuffle almost every key, then switch to a ring with virtual nodes and watch only a sliver move.",
+      "Kill one node in a cache cluster — watch naive modulo hashing invalidate 90% of your keys at once, while a hash ring remaps only 1/N without a database stampede.",
     category: "Data & Caching",
     status: "planned",
   },
