@@ -33,14 +33,20 @@ export function fnv1a(key: string): number {
 }
 
 /**
+ * The two base hashes `kHashes` combines. `h2` is forced odd so it's never
+ * 0 — otherwise every index would repeat h1.
+ */
+export function hashPair(key: string): [h1: number, h2: number] {
+  return [fnv1a(key), (fnv1aFrom(SECOND_OFFSET_BASIS, key) | 1) >>> 0];
+}
+
+/**
  * `k` bucket indexes in [0, m) for one key, via double hashing:
  * index_i = (h1 + i * h2) mod m. Two real hashes stand in for k independent
  * ones (Kirsch & Mitzenmacher, 2006), which is what a Bloom filter needs.
- * `h2` is forced odd so it's never 0 — otherwise every index would repeat h1.
  */
 export function kHashes(key: string, k: number, m: number): number[] {
-  const h1 = fnv1a(key);
-  const h2 = (fnv1aFrom(SECOND_OFFSET_BASIS, key) | 1) >>> 0;
+  const [h1, h2] = hashPair(key);
   // Plain number math is exact here: h1 + i * h2 stays far below 2^53 for any realistic k.
   return Array.from({ length: k }, (_, i) => (h1 + i * h2) % m);
 }

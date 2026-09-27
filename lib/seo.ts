@@ -6,7 +6,7 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ulearn-it.v
 export const SITE_NAME = "ulearn";
 export const SITE_TITLE = "ulearn – Interactive System Design Simulations";
 export const SITE_DESCRIPTION =
-  "ulearn teaches system design with live, interactive simulations — load balancers, rate limiters, message queues, RabbitMQ vs Kafka and hashing. Watch each mechanism run, tweak it, break it on purpose.";
+  "ulearn teaches system design with live, interactive simulations — load balancers, rate limiters, message queues, RabbitMQ vs Kafka, hashing and Bloom filters. Watch each mechanism run, tweak it, break it on purpose.";
 
 export type TopicTab = "simulate" | "study" | "glossary" | "match";
 
@@ -79,6 +79,15 @@ const TOPIC_SEO: Record<string, TopicSeo> = {
     studyDescription:
       "How hash functions and hash tables work: why collisions are unavoidable, chaining vs open addressing, load factor and resizing, and where hashing shows up in real systems.",
     teaches: ["Hash functions", "Hash tables", "Hash collisions", "Separate chaining", "Open addressing"],
+  },
+  "bloom-filter": {
+    simulateTitle: "Bloom Filter Simulator – False Positives, Bit Arrays & Disk Seeks",
+    simulateDescription:
+      "Interactive Bloom filter simulation. Insert and check keys, watch absent keys get rejected from RAM before they reach the disk, then saturate the bit array until false positives leak through.",
+    studyTitle: "Bloom Filters Explained – False Positive Rate, Sizing & LSM Trees",
+    studyDescription:
+      "How Bloom filters work: zero false negatives vs acceptable false positives, choosing m and k, why you can't delete, Bloom vs cuckoo vs counting filters, and why every SSTable has one.",
+    teaches: ["Bloom filters", "False positive rate", "Probabilistic data structures", "LSM trees", "Counting Bloom filter"],
   },
 };
 

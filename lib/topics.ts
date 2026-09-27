@@ -86,7 +86,7 @@ export const topics: readonly Topic[] = [
     slug: "bloom-filter",
     title: "Bloom Filter",
     tagline:
-      "k hashes, m bits, zero false negatives — skip the database for keys that definitely don't exist, then overfill the array and watch keys you never added come back as 'probably present'.",
+      "Stop wasted disk I/O before it starts — query absent keys to watch instant in-memory rejects, then saturate the bit array until false positives leak through.",
     category: "Data & Caching",
     status: "planned",
   },

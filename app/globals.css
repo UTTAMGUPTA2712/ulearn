@@ -55,6 +55,20 @@
   --status-down: #e0342a;
   --status-active: #22d3ee;
 
+  /*
+   * Categorical palette for the Bloom filter's k hash functions (h1…h6) —
+   * a data encoding, not decoration (§4). Deliberately avoids blue (a set
+   * bit is --accent), green and red (status), so a probe's color only ever
+   * means "which hash picked this bit". Every use also prints the hash's
+   * number, so color is never the only cue.
+   */
+  --hash-1: #f472b6;
+  --hash-2: #fb923c;
+  --hash-3: #c084fc;
+  --hash-4: #d6b98c;
+  --hash-5: #7dd3fc;
+  --hash-6: #e0a0bc;
+
   color-scheme: dark;
 }
 
@@ -77,6 +91,13 @@
   --status-warn: #a15c07;
   --status-down: #b31c12;
   --status-active: #0e7490;
+
+  --hash-1: #be185d;
+  --hash-2: #c2410c;
+  --hash-3: #7e22ce;
+  --hash-4: #8a6d3b;
+  --hash-5: #0369a1;
+  --hash-6: #9d4b6b;
 
   color-scheme: light;
 }
