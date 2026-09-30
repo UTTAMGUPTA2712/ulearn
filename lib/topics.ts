@@ -88,7 +88,7 @@ export const topics: readonly Topic[] = [
     tagline:
       "Stop wasted disk I/O before it starts — query absent keys to watch instant in-memory rejects, then saturate the bit array until false positives leak through.",
     category: "Data & Caching",
-    status: "planned",
+    status: "available",
   },
   {
     slug: "raft-consensus",
