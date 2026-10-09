@@ -57,7 +57,7 @@ export const topics: readonly Topic[] = [
     tagline:
       "Taking turns vs. more cores — run the same tasks on one core or four, blocking or interleaved, and watch why waiting work needs concurrency and number crunching needs parallelism.",
     category: "Compute & Concurrency",
-    status: "planned",
+    status: "available",
   },
   {
     slug: "circuit-breaker",
