@@ -63,13 +63,13 @@ const TOPIC_SEO: Record<string, TopicSeo> = {
     teaches: ["RabbitMQ", "Apache Kafka", "Message brokers", "Event streaming", "Consumer groups"],
   },
   "concurrency-vs-parallelism": {
-    simulateTitle: "Concurrency vs Parallelism – Interactive Visualization",
+    simulateTitle: "Concurrency vs Parallelism Simulator – Cores, Threads & I/O Waits",
     simulateDescription:
-      "Watch the difference between concurrency and parallelism: run the same tasks sequentially, interleaved and in parallel and see the wall-clock time actually change.",
-    studyTitle: "Concurrency vs Parallelism Explained – Threads vs Processes",
+      "Interactive concurrency vs parallelism simulation. Run the same CPU-bound or I/O-bound tasks sequentially, concurrently on one core, or in parallel on four, and watch a per-core timeline show which one actually finishes sooner.",
+    studyTitle: "Concurrency vs Parallelism Explained – Threads, Processes, Async & Amdahl's Law",
     studyDescription:
-      "Concurrency vs parallelism, multithreading vs multiprocessing, and threads vs processes — explained with the tradeoffs that matter in practice.",
-    teaches: ["Concurrency", "Parallelism", "Multithreading", "Multiprocessing", "Threads vs processes"],
+      "Concurrency vs parallelism: the four quadrants, why I/O-bound work needs concurrency and CPU-bound work needs cores, context-switch cost, Amdahl's law, threads vs processes vs event loops, the GIL, and race conditions.",
+    teaches: ["Concurrency", "Parallelism", "CPU-bound vs I/O-bound", "Threads vs processes", "Amdahl's law"],
   },
   hashing: {
     simulateTitle: "Hash Table & Collision Simulator – Chaining vs Open Addressing",

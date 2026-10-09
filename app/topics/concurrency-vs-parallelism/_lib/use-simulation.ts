@@ -2,25 +2,29 @@
 
 import { useEffect, useState } from "react";
 
-import { ConcurrencyEngine } from "./engine";
-import type { Mode, SimSnapshot } from "./types";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
+
+import { ConcurrencyEngine } from "./engine";
+import type { Scheduling, SimSnapshot, Workload } from "./types";
 
 /** Caps how big a single tick's delta can be after the tab was backgrounded. */
 const MAX_DELTA_MS = 100;
 
 /**
- * Runs one looping engine instance on a requestAnimationFrame loop and
- * exposes its latest snapshot. `mode` (and `workerCount`, for "parallel")
- * are read once at mount — this screen shows exactly one mode for its whole
- * lifetime, so there's no setter to expose. See the load-balancer topic's
- * `use-simulation.ts` for why the engine stays a plain mutable class
- * outside React.
+ * Runs the engine on a requestAnimationFrame loop and exposes a snapshot plus
+ * the actions the control panel needs. See the load-balancer topic's
+ * `use-simulation.ts` for why the engine stays a plain mutable class outside
+ * React.
  */
-export function useConcurrencySimulation(mode: Mode, workerCount?: number) {
-  const [engine] = useState(() => new ConcurrencyEngine(mode, workerCount));
+export function useConcurrencySimulation() {
+  const [engine] = useState(() => new ConcurrencyEngine());
   const [snapshot, setSnapshot] = useState<SimSnapshot>(() => engine.getSnapshot());
   const reducedMotion = usePrefersReducedMotion();
+
+  // Reduced motion makes `run()` jump straight to the finished timeline.
+  useEffect(() => {
+    engine.setReducedMotion(reducedMotion);
+  }, [engine, reducedMotion]);
 
   useEffect(() => {
     let lastTime = performance.now();
@@ -38,5 +42,16 @@ export function useConcurrencySimulation(mode: Mode, workerCount?: number) {
     return () => cancelAnimationFrame(frame);
   }, [engine]);
 
-  return { snapshot, reducedMotion };
+  return {
+    snapshot,
+    setWorkload: (w: Workload) => engine.setWorkload(w),
+    setScheduling: (s: Scheduling) => engine.setScheduling(s),
+    setCores: (n: number) => engine.setCores(n),
+    setSpeed: (speed: number) => engine.setSpeed(speed),
+    run: () => engine.run(),
+    pause: () => engine.pause(),
+    resetRun: () => engine.resetRun(),
+    clearRuns: () => engine.clearRuns(),
+    runScenario: (w: Workload, s: Scheduling, cores: number) => engine.runScenario(w, s, cores),
+  };
 }

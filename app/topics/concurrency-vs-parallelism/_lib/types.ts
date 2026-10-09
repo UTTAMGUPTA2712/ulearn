@@ -1,42 +1,92 @@
 /**
- * Types for the concurrency/parallelism simulation. Colocated with this
+ * Types for the concurrency-vs-parallelism simulation. Colocated with this
  * topic's route on purpose — nothing here is shared with other topics.
- *
- * Deliberately simple: this topic's job is to make the Rob Pike distinction
- * ("dealing with a lot of things at once" vs "doing a lot of things at
- * once") visible in one glance, not to model a real scheduler. See
- * `engine.ts` for why there's no GIL, no I/O legs, no per-core busy% here —
- * an earlier version of this simulation modeled all of that and it made the
- * page harder to read, not easier.
  */
 
-/** The three things being compared — matches the Simulate page's mode switch 1:1. */
-export type Mode = "sequential" | "concurrent" | "parallel";
+/** What the six tasks spend their time on. */
+export type Workload = "cpu" | "io" | "mixed";
 
 /**
- * `queued` — hasn't started yet.
- * `starting` — just claimed a lane, brief spin-up before it begins actually
- * making progress. Exists so a task never snaps straight from idle chip to
- * mid-progress bar — see `engine.ts`'s `STARTING_MS`.
- * `running` — actively making progress right now, in some lane.
- * `completing` — done making progress, holding a brief "finished" beat
- * before it's removed from the lane — see `COMPLETING_MS`.
+ * `blocking` — a core takes a task and keeps it until it finishes, even while
+ * the task sits waiting on I/O. `concurrent` — a core lets go of a task the
+ * moment it starts waiting (and after each time slice), and picks up another.
+ */
+export type Scheduling = "blocking" | "concurrent";
+
+export type SegmentKind = "cpu" | "io";
+
+export interface Segment {
+  kind: SegmentKind;
+  ms: number;
+}
+
+/**
+ * `ready` — wants a core, doesn't have one (or is being switched onto one).
+ * `running` — on a core, computing. `io` — waiting on the network/disk.
  * `done` — finished.
  */
-export type TaskStatus = "queued" | "starting" | "running" | "completing" | "done";
+export type TaskState = "ready" | "running" | "io" | "done";
 
 export interface Task {
   id: number;
-  totalMs: number;
-  /** ms of work left — decremented only while `running`, so a paused (queued) task resumes where it left off. */
-  remainingMs: number;
-  status: TaskStatus;
-  /** ms left in the current `starting`/`completing` phase. Unused (0) in every other status. */
-  phaseRemainingMs: number;
-  /** Which lane currently holds this task. Null once it's back in the queue or finished. */
-  laneId: number | null;
-  startedAt: number | null;
+  segments: readonly Segment[];
+  /** Index into `segments` of the segment in progress. */
+  seg: number;
+  /** ms left in the current segment. */
+  segLeft: number;
+  state: TaskState;
+  /** Core currently holding this task, or null. */
+  core: number | null;
   finishedAt: number | null;
+}
+
+export interface Core {
+  id: number;
+  /** Task this core is running, switching to, or (blocking mode) blocked on. */
+  task: number | null;
+  /** The last task this core ran — switching back to the same one is free. */
+  lastTask: number | null;
+  /** ms left in a context switch, 0 when not switching. */
+  switchLeft: number;
+  /** CPU ms the current task has used since it got the core — concurrent mode preempts at the quantum. */
+  sliceUsed: number;
+}
+
+export type CoreSpanKind = "cpu" | "blocked" | "switch";
+export type TaskSpanKind = "cpu" | "io" | "ready";
+
+/** One contiguous stretch on a core's row of the timeline. */
+export interface CoreSpan {
+  core: number;
+  task: number;
+  kind: CoreSpanKind;
+  start: number;
+  end: number;
+}
+
+/** One contiguous stretch on a task's row of the timeline. */
+export interface TaskSpan {
+  task: number;
+  kind: TaskSpanKind;
+  start: number;
+  end: number;
+}
+
+export type Phase = "idle" | "running" | "paused" | "done";
+
+export interface RunResult {
+  id: number;
+  workload: Workload;
+  scheduling: Scheduling;
+  cores: number;
+  wallMs: number;
+  /** Sequential wall time (1 core, blocking) for the same workload, divided by `wallMs`. */
+  speedup: number;
+  /** Share of total core time spent computing. */
+  utilization: number;
+  /** Share of total core time spent held by a task that was waiting on I/O. */
+  blocked: number;
+  switches: number;
 }
 
 export interface LogEntry {
@@ -46,24 +96,27 @@ export interface LogEntry {
   message: string;
 }
 
-export interface RunStats {
-  spawned: number;
-  completed: number;
-  runStartedAt: number | null;
-  /** null while the run is still in progress. */
-  runFinishedAt: number | null;
-}
-
 export interface SimSnapshot {
+  phase: Phase;
+  workload: Workload;
+  scheduling: Scheduling;
+  cores: number;
+  speed: number;
+  /** Simulated ms since the run started. */
   now: number;
-  mode: Mode;
-  /** Number of lanes currently drawn — 1 for sequential/concurrent, `workerCount` for parallel. */
-  laneCount: number;
-  /** How many lanes "parallel" mode uses — the one control this simulation exposes. */
-  workerCount: number;
   tasks: Task[];
+  coreStates: Core[];
+  coreSpans: readonly CoreSpan[];
+  taskSpans: readonly TaskSpan[];
+  switches: number;
+  /** Core-ms spent computing / blocked so far, for the live stats. */
+  cpuMs: number;
+  blockedMs: number;
+  /** Wall time of the same workload run sequentially (1 core, blocking). */
+  baselineMs: number;
+  /** Width of the timeline's time axis, fixed per workload so every run is drawn on the same scale. */
+  axisMs: number;
+  /** Most recent first. */
+  runs: RunResult[];
   log: LogEntry[];
-  stats: RunStats;
-  /** Derived: `(runFinishedAt ?? now) - runStartedAt`, or 0 before a run has started. */
-  wallClockMs: number;
 }

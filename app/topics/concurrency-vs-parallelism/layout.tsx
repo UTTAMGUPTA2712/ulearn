@@ -6,6 +6,7 @@ import { topicJsonLd } from "@/lib/seo";
 const TABS = [
   { href: "/topics/concurrency-vs-parallelism", label: "Simulate" },
   { href: "/topics/concurrency-vs-parallelism/study", label: "Study" },
+  { href: "/topics/concurrency-vs-parallelism/glossary", label: "Glossary" },
 ];
 
 export default function ConcurrencyLayout({ children }: { children: React.ReactNode }) {
@@ -13,12 +14,10 @@ export default function ConcurrencyLayout({ children }: { children: React.ReactN
     <Container className="py-10">
       <JsonLd data={topicJsonLd("concurrency-vs-parallelism")} />
       <p className="text-xs font-medium text-text-faint">topics / compute-concurrency</p>
-      <h1 className="mt-1 text-xl font-semibold tracking-tight text-text">
-        Concurrency vs Parallelism vs Multithreading vs Multiprocessing
-      </h1>
+      <h1 className="mt-1 text-xl font-semibold tracking-tight text-text">Concurrency vs Parallelism</h1>
       <p className="mt-1 max-w-2xl text-sm text-text-muted">
-        Dealing with a lot of things at once, versus doing a lot of things at once — and the two ways to build
-        either one.
+        Concurrency is taking turns so nothing sits idle while it waits; parallelism is more cores working at the
+        same instant. Run the same six tasks under each and watch which one actually moves the finish line.
       </p>
 
       <div className="mt-6">

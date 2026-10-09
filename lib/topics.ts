@@ -55,7 +55,7 @@ export const topics: readonly Topic[] = [
     slug: "concurrency-vs-parallelism",
     title: "Concurrency vs Parallelism",
     tagline:
-      "Dealing with a lot of things at once vs. doing a lot of things at once — switch from Sequential to Parallel and watch the wall clock actually drop instead of just interleaving.",
+      "Taking turns vs. more cores — run the same tasks on one core or four, blocking or interleaved, and watch why waiting work needs concurrency and number crunching needs parallelism.",
     category: "Compute & Concurrency",
     status: "planned",
   },
